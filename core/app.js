@@ -4,7 +4,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require('path');
 const timeout = require("connect-timeout");
-const { loadControllers } = require("./router");
+const { loadApp } = require("./router");
 
 const app = express();
 
@@ -19,6 +19,7 @@ app.use(cors());
 app.use(timeout("10s"));
 
 // Auto-load controllers
-loadControllers(app);
+loadApp({ context : "/", app, prefix : "/"});
+//loadApp({ context : "/test/", app, prefix : "/t"});
 
 module.exports = app;
