@@ -14,6 +14,14 @@ new BootLoader()
     name: "chat",
     context: "/chat/",
   })
+  .map({
+    name: "scriptus",
+    context: "/scriptus/",
+  })
+  .map({
+    name: "scriptus-2",
+    context: "/scriptus/",
+  })
   .create(function ({ name, app }) {
     console.log(`APP[${name}]: Created`);
   })
