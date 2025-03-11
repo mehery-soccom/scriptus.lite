@@ -1,5 +1,5 @@
 const mongon = require("@bootloader/mongon");
-const GlobalVarsSchema = require("./GlobalVarsSchema");
+const GlobalVarsSchema = require("../model/GlobalVarsSchema");
 
 module.exports = {
   async getGlobalVars({ keys, domain, tnt }) {
