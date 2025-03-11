@@ -30,15 +30,35 @@ export default class ChatController {
     return { results: [body] };
   }
 
+  @RequestMapping({ path: "/api/message/inbound", method: "post" })
+  @ResponseBody
+  async postMessageInbound({ request, response }) {
+    const { body, cookies } = request;
+
+    console.log("/api/message/inbound >", body);
+
+    const contact_id = body?.contacts?.[0]?.contactId;
+
+    if (!contact_id) {
+      throw Error("Contact ID is missing");
+    }
+
+    InboundQueue.queueTask(body, {
+      queue: contact_id,
+    });
+
+    return {};
+  }
+
   @ResponseView
   @RequestMapping({ path: "/*", method: "get" })
   async defaultPage() {
     return "home";
   }
-  
+
   @ResponseBody
   @RequestMapping({ path: "/api/messages", method: "get" })
-  async getMessage({ request: { body, cookies }, headers }) {
+  async getMessage({ request: { body, cookies }, response }) {
     let contact_id = cookies.contact_id;
     if (!contact_id) {
       contact_id = crypto.randomUUID();
@@ -47,6 +67,4 @@ export default class ChatController {
     let msg = await RQueue({ key: contact_id }).pop();
     return { results: msg ? [msg] : [] };
   }
-
-
 }
