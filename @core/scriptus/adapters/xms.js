@@ -1,3 +1,8 @@
+const fetch = require("node-fetch");
+const config = require("@bootloader/config");
+var secretKey = config.get("mry.scriptus.secret");
+var messageTypes = ["template", "audio", "document", "image", "location", "text", "video", "voice", "contacts"];
+
 function XMSAdapeter({ message: messageBody }) {
   this.toContext = function () {
     var context = {
@@ -70,7 +75,60 @@ function XMSAdapeter({ message: messageBody }) {
   };
 
   this.sendMessage = async function (options) {
-    return console.log("sendMessage", options);
+    if (options.text && typeof options.text == "string") {
+      options.text = {
+        body: options.text,
+      };
+    }
+
+    for (var i in messageTypes) {
+      let type = messageTypes[i];
+      if (options[type]) {
+        options.type = type;
+        break;
+      }
+    }
+
+    const formData = {
+      channelId: messageBody?.contacts[0]?.channelId,
+      to: {
+        contactId: messageBody.contacts[0].contactId,
+      },
+      type: options.type,
+      options: options.options,
+      image: options.image,
+      video: options.video,
+      document: options.document,
+      audio: options.audio,
+      voice: options.voice,
+    };
+    formData[options.type] = options[options.type];
+    const url = `https://${messageBody.meta.domain}.${messageBody.meta.server}/xms/api/v1/message/send`;
+    const headers = {
+      "x-api-key": secretKey,
+      "x-api-id": messageBody.meta.appId,
+      "Content-Type": "application/json",
+      // 'Content-Type': 'application/x-www-form-urlencoded',
+    };
+    console.log("===>   POST : ", { url, headers, formData });
+    const response = await fetch(url, {
+      method: "POST", // *GET, POST, PUT, DELETE, etc.
+      mode: "cors", // no-cors, *cors, same-origin
+      cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+      credentials: "same-origin", // include, *same-origin, omit
+      headers,
+      redirect: "follow", // manual, *follow, error
+      referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+      body: JSON.stringify(formData), // body data type must match "Content-Type" header
+    });
+    const json = await response.json();
+    if (json.statusKey == "SUCCESS") {
+      console.log("xms:SUCCESS");
+    } else {
+      console.log("xms:<<<<" + json.statusKey, json);
+    }
+
+    return json;
   };
 }
 module.exports = XMSAdapeter;
