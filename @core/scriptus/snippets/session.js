@@ -2,9 +2,11 @@ const config = require("@bootloader/config");
 const mongon = require("@bootloader/mongon");
 var secretKey = config.get("mry.scriptus.secret");
 
+const ClientAppStore = require("../store/ClientAppStore");
+
 module.exports = function (
   $,
-  { server, tnt, app_id, domain, contact_id, channel_id, session, userData, session_id, execute }
+  { server, tnt, app_id, appCode, domain, contact_id, channel_id, session, userData, session_id, execute }
 ) {
   function session() {
     var base_url = "https://" + domain + "." + server + "/xms";
@@ -45,11 +47,8 @@ module.exports = function (
     }
 
     async function getAppConfig(params) {
-      const ConfigClientApp = mongon.getCollection(domain, `CONFIG_CLIENT_KEY`);
-      const findResult = await ConfigClientApp.findOne({ _id: mongon.Types.ObjectId(app_id) });
-      if (findResult) {
-        let result = JSON.parse(JSON.stringify(findResult));
-
+      const result = await ClientAppStore.get({ domain, id: app_id, code: appCode });
+      if (result) {
         let config = {};
         let configSetup = {};
         Object.keys(result.config).map((c) => {
@@ -71,16 +70,8 @@ module.exports = function (
     }
 
     async function getAppCustom(params) {
-      if (mongon.Types.ObjectId.isValid(app_id)) {
-        const ConfigClientApp = mongon.getCollection(domain, `CONFIG_CLIENT_KEY`);
-        const findResult = await ConfigClientApp.findOne({ _id: mongon.Types.ObjectId(app_id) });
-        if (findResult) {
-          let result = JSON.parse(JSON.stringify(findResult));
-
-          return result.custom || {};
-        }
-      }
-      return {};
+      const doc = await ClientAppStore.get({ domain, id: app_id, code: appCode });
+      return doc?.custom || {};
     }
 
     return {

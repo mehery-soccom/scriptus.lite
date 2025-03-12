@@ -83,10 +83,10 @@ async function onHandleDefault() {
   });
   let prompt = await create_intent(history);
   let resp = await $.openai.next(prompt, functions);
-  console.log("resp", resp);
+  //console.log("resp", resp);
   console.log("resp.message()", resp.message());
-  console.log("resp.isError()", resp.isError());
-  console.log("resp.error()", resp.error());
+  //console.log("resp.isError()", resp.isError());
+  //console.log("resp.error()", resp.error());
 
   resp.function_call &&
     resp
@@ -211,6 +211,7 @@ async function create_prompt(systemContents, history, instructions) {
 
 async function create_intent(history) {
   const options = await $.session.app.options();
+  //console.log("====options====",options);
   return await create_prompt(
     [
       `

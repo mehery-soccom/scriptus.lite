@@ -36,7 +36,7 @@ module.exports = function (
       // then(cb){
       //     return findToken.then(cb);
       // },
-      async chat_completions_create(a, b, c, d) {
+      async chat_completions_create(a, ...args) {
         let doc = await getConfig();
         //console.log("doc===",_options,"====",doc)
         if (doc?.value?.provider == "AZURE") {
@@ -75,10 +75,11 @@ module.exports = function (
               endpoint: doc.value?.azure?.endpoint,
               deployment: deployment,
               apiVersion: apiVersion,
-            }).chat.completions.create(a, b, c, d);
+            }).chat.completions.create(a, ...args);
           }
         } else if (doc?.secret?.apiKey) {
           let model = doc?.value?.model || "gpt-3.5-turbo";
+          //console.log("=====",a,args)
           return await new OpenAI({
             apiKey: doc?.secret?.apiKey,
             //logger: new log.Logger(log.INFO)
@@ -87,9 +88,7 @@ module.exports = function (
               model: model,
               ...a,
             },
-            b,
-            c,
-            d
+            ...args
           );
         } else {
           throw "Error ( No OpenAI Provider )";
@@ -98,9 +97,9 @@ module.exports = function (
       async next(messages, functions) {
         try {
           let response = await this.chat_completions_create({
-            messages: messages || [
+            messages: (messages || [
               { role: "system", content: "You are an Agent Who is curious about user's issue and wants to solve it." },
-            ],
+            ]).filter(message => message.content && message.content.trim() !== ""),
             functions: functions,
             function_call: functions && functions.length ? "auto" : undefined,
             max_tokens: 200,
@@ -187,7 +186,7 @@ module.exports = function (
 
   openai.chat = {
     completions: {
-      async create(a, b, c, d) {
+      async create(a, ...args) {
         return await openai().chat_completions_create(
           {
             max_tokens: 200,
@@ -196,9 +195,7 @@ module.exports = function (
             presence_penalty: 0,
             ...a,
           },
-          b,
-          c,
-          d
+          ...args
         );
       },
     },
