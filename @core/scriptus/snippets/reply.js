@@ -1,4 +1,5 @@
 const config = require("@bootloader/config");
+import ChainedPromise from "../../lib/ChainedPromise";
 
 module.exports = function (
   $,
@@ -58,23 +59,13 @@ module.exports = function (
       console.log("setSessionEventTimer error", error);
     }
   }
-  class ReplyPromise extends Promise {
-    constructor(executor = (resolve) => resolve(), prev) {
-      let resolver;
-      super((resolve, reject) => {
-        resolver = resolve;
-        if(prev){
-          prev.then(result => executor(resolve, reject))
-        }else{
-          executor(resolve, reject);
-        }
-      });
-      this.resolver = resolver;
-      this.data = null;
+  class ReplyPromise extends ChainedPromise {
+    constructor(executor = (resolve) => resolve(0)) {
+      super(executor);
     }
 
     reply(options) {
-      return new ReplyPromise((resolve) => {
+      return this.chain(async (resolve) => {
         console.log(`To(${contact_id}) Sending:`, options);
 
         // let handlerindex = -1;
@@ -119,25 +110,22 @@ module.exports = function (
             });
           }
         }
-
-        (async function(){
-          let result = await adapter.sendMessage(options);
-          console.log("adapter.sendMessage success", result);
-          resolve(options);
-        })();
-      }, this);
+        let result = await adapter.sendMessage(options);
+        console.log("adapter.sendMessage success", result);
+        return options;
+      });
     }
 
     listen(options) {
-      return new ReplyPromise((resolve) => {
+      return this.chain(async (parentResp) => {
         console.log(`To(${contact_id}) listening:`, options);
 
-        if (arguments.length == 0) return resolve();
+        if (!options) return;
 
         let listener = $.listen._create.apply($.listen, arguments);
         let handlerInfo = listener.getInfo();
 
-        if (handlerInfo.options.length == 0) return resolve();
+        if (handlerInfo.options.length == 0) return;
 
         // if (handlerindex > -1) {
         //   session.handler[handlerindex] = handlerInfo;
@@ -160,8 +148,8 @@ module.exports = function (
           setSessionEventTimer(payload); // need to await ?
         }
 
-        resolve(options);
-      }, this);
+        return options;
+      });
     }
   }
 

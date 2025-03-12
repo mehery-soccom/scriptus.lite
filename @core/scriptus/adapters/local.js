@@ -74,7 +74,7 @@ function LocalAdapeter({ message, contact_id, sessionId, appCode }) {
   };
 
   this.sendMessage = function (options) {
-    RQueue({ key: contact_id }).push({ author: "Bot", type: "text", data: { text: options } });
+    RQueue({ key: contact_id }).push({ author: "Bot", type: "text", data: { text: options?.text?.body } });
   };
 }
 module.exports = LocalAdapeter;

@@ -171,7 +171,7 @@ function ChatBox({ isSessionStart, isSessionRouted, handler = [], adapter }) {
       contact: contact,
     };
 
-    console.log("commitDetails", commitDetails)
+    //console.log("commitDetails", commitDetails)
 
     if (returnValue && returnValue.then) {
       returnValue.then(function () {
