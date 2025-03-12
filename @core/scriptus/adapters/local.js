@@ -1,6 +1,6 @@
 import { redis, RQueue, waitForReady } from "@bootloader/redison";
 
-function LocalAdapeter({ message, contact_id, sessionId }) {
+function LocalAdapeter({ message, contact_id, sessionId, appCode }) {
   //{ author: "Bot", type: "text", data: { text: `Response(${$.inbound.data.text})` }
 
   this.toContext = function () {
@@ -12,7 +12,7 @@ function LocalAdapeter({ message, contact_id, sessionId }) {
       tnt: "default",
       domain: "default",
       app_id: "0",
-      appCode: "my_bot",
+      appCode: appCode || "my_bot",
       appType: "bot",
       //Contact
       contact_id: contact_id,
