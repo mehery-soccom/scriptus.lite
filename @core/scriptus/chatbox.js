@@ -54,7 +54,7 @@ function ChatBox({ isSessionStart, isSessionRouted, handler = [], adapter }) {
       // inputCode: inputCode,
       setTimeout: setTimeout,
       $: $,
-      console: console,
+      console: $.console,
 
       // setResolver: function (resolverName) {
       //   dbservice.setResolver(app_id, resolverName, contact_id, tnt);
@@ -152,7 +152,7 @@ function ChatBox({ isSessionStart, isSessionRouted, handler = [], adapter }) {
       }
     } else if (handler?.length > 0) {
       try {
-        returnValue = await $.reply_handle();
+        returnValue = await $.reply._handle();
       } catch (e) {
         console.error("onMessageListenException", e);
       }

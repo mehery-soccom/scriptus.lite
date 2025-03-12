@@ -13,9 +13,11 @@ export default class InboundQueue {
   }
 
   async execute({ task, queue }) {
+    console.log("InboundQueue > execute", { task, queue });
+
     const contact_id = queue;
     new ChatBox({
-      adapter: new LocalAdapeter({ message: task, contact_id }),
+      adapter: new XMSAdapeter({ message: task, contact_id }),
     }).execute();
   }
 }
