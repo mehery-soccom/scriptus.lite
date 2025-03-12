@@ -37,6 +37,7 @@ const functions = [
   },
 ];
 
+/*
 async function onMessageReceive() {
   console.log("onMessageReceive");
   let resp = await $.reply(`Response(${$.inbound.getText()})`).listen(listenHandler);
@@ -47,7 +48,8 @@ async function listenHandler() {
   let resp = await $.reply(`2 Response(${$.inbound.getText()})`);
   console.log("Response:", resp);
 }
-/*
+*/
+
 async function onMessageReceive() {
   //return await onHandleDefault();
   let inputCode = ($.inbound.getCode() || "").toUpperCase();
@@ -70,7 +72,6 @@ async function onMessageReceive() {
       return await onHandleDefault();
   }
 }
-*/
 
 async function onHandleDefault() {
   //console.log("onHandleDefault");

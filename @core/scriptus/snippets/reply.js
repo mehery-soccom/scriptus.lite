@@ -59,11 +59,15 @@ module.exports = function (
     }
   }
   class ReplyPromise extends Promise {
-    constructor(executor = (resolve) => resolve()) {
+    constructor(executor = (resolve) => resolve(), prev) {
       let resolver;
       super((resolve, reject) => {
         resolver = resolve;
-        executor(resolve, reject);
+        if(prev){
+          prev.then(result => executor(resolve, reject))
+        }else{
+          executor(resolve, reject);
+        }
       });
       this.resolver = resolver;
       this.data = null;
@@ -121,7 +125,7 @@ module.exports = function (
           console.log("adapter.sendMessage success", result);
           resolve(options);
         })();
-      });
+      }, this);
     }
 
     listen(options) {
@@ -157,7 +161,7 @@ module.exports = function (
         }
 
         resolve(options);
-      });
+      }, this);
     }
   }
 
