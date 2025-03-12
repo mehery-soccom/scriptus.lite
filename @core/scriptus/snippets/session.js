@@ -71,12 +71,14 @@ module.exports = function (
     }
 
     async function getAppCustom(params) {
-      const ConfigClientApp = mongon.getCollection(domain, `CONFIG_CLIENT_KEY`);
-      const findResult = await ConfigClientApp.findOne({ _id: mongon.Types.ObjectId(app_id) });
-      if (findResult) {
-        let result = JSON.parse(JSON.stringify(findResult));
+      if (mongon.Types.ObjectId.isValid(app_id)) {
+        const ConfigClientApp = mongon.getCollection(domain, `CONFIG_CLIENT_KEY`);
+        const findResult = await ConfigClientApp.findOne({ _id: mongon.Types.ObjectId(app_id) });
+        if (findResult) {
+          let result = JSON.parse(JSON.stringify(findResult));
 
-        return result.custom || {};
+          return result.custom || {};
+        }
       }
       return {};
     }

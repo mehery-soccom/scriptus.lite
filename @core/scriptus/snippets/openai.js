@@ -77,7 +77,7 @@ module.exports = function (
               apiVersion: apiVersion,
             }).chat.completions.create(a, b, c, d);
           }
-        } else {
+        } else if(doc?.secret?.apiKey){
           let model = doc?.value?.model || "gpt-3.5-turbo";
           return await new OpenAI({
             apiKey: doc?.secret?.apiKey,
@@ -91,6 +91,8 @@ module.exports = function (
             c,
             d
           );
+        } else {
+          throw "Error ( No OpenAI Provider )"
         }
       },
       async next(messages, functions) {
