@@ -1,6 +1,6 @@
 import { Job } from "@bootloader/core/decorators";
 import { ChatBox } from "./../../@core/scriptus";
-import { XMSAdapeter, LocalAdapeter } from "./../../@core/scriptus/adapters";
+import { XMSAdapter, LocalAdapter } from "./../../@core/scriptus/adapters";
 
 ChatBox.load({
   dir: "../",
@@ -17,7 +17,9 @@ export default class InboundQueue {
 
     const contact_id = queue;
     new ChatBox({
-      adapter: new XMSAdapeter({ message: task, contact_id }),
+      adapter: task.meta
+        ? new XMSAdapter({ message: task, contact_id })
+        : new LocalAdapter({ message: task, contact_id }),
     }).execute();
   }
 }
