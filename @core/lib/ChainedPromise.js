@@ -5,7 +5,11 @@ class ChainedPromise extends Promise {
       resolver = resolve;
       rejecter = reject;
       if (typeof executor === "function") {
-        executor(resolve, reject);
+        try {
+          executor(resolve, reject);
+        } catch (error) {
+          reject(error);
+        }
       }
     });
 
@@ -26,12 +30,20 @@ class ChainedPromise extends Promise {
   }
 
   resolve(value) {
-    this._resolve(value);
+    if (this._resolve) {
+      this._resolve(value);
+    } else {
+      throw new Error("Promise has already been settled.");
+    }
     return this;
   }
 
   reject(reason) {
-    this._reject(reason);
+    if (this._reject) {
+      this._reject(reason);
+    } else {
+      throw new Error("Promise has already been settled.");
+    }
     return this;
   }
 
