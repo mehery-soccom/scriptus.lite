@@ -35,8 +35,6 @@ export default class ChatController {
   async postMessageInbound({ request, response }) {
     const { body, cookies } = request;
 
-    console.log("/api/message/inbound >", body);
-
     const contact_id = body?.contacts?.[0]?.contactId;
 
     if (!contact_id) {

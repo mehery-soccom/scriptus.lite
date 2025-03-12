@@ -69,8 +69,8 @@ function XMSAdapeter({ message: messageBody }) {
     return context;
   };
 
-  this.sendMessage = function (options) {
-    console.log("sendMessage", options);
+  this.sendMessage = async function (options) {
+    return console.log("sendMessage", options);
   };
 }
 module.exports = XMSAdapeter;
