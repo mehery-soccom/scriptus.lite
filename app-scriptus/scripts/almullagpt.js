@@ -38,7 +38,17 @@ const functions = [
 ];
 
 async function onMessageReceive() {
-  console.log("onMessageReceive")
+  console.log("onMessageReceive");
+  let resp = await $.reply(`Response(${$.inbound.getText()})`).listen(listenHandler);
+  console.log("Response:", resp);
+}
+async function listenHandler() {
+  console.log("listenHandler");
+  let resp = await $.reply(`2 Response(${$.inbound.getText()})`);
+  console.log("Response:", resp);
+}
+/*
+async function onMessageReceive() {
   //return await onHandleDefault();
   let inputCode = ($.inbound.getCode() || "").toUpperCase();
   //console.log("handleInput",inputCode);
@@ -60,6 +70,7 @@ async function onMessageReceive() {
       return await onHandleDefault();
   }
 }
+*/
 
 async function onHandleDefault() {
   //console.log("onHandleDefault");
@@ -71,111 +82,115 @@ async function onHandleDefault() {
   });
   let prompt = await create_intent(history);
   let resp = await $.openai.next(prompt, functions);
-  console.log("resp.message()", resp);
+  console.log("resp", resp);
+  console.log("resp.message()", resp.message());
+  console.log("resp.isError()", resp.isError());
+  console.log("resp.error()", resp.error());
 
-  resp
-    .function_call(function ({ content }) {
-      //console.log("intentResponse", content);
-      //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
-      const match = content.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
-      if (match && match.groups) {
-        //console.log("MATCHED")
-        let arg1 = match.groups.params ? match.groups.params.trim() : null;
-        let cleanedContent = content.replace(match[0], "").trim();
-        //console.log("cleanedContent=",cleanedContent)
+  resp.function_call &&
+    resp
+      .function_call(function ({ content }) {
+        //console.log("intentResponse", content);
+        //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
+        const match = content.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
+        if (match && match.groups) {
+          //console.log("MATCHED")
+          let arg1 = match.groups.params ? match.groups.params.trim() : null;
+          let cleanedContent = content.replace(match[0], "").trim();
+          //console.log("cleanedContent=",cleanedContent)
+          return {
+            name: match.groups.intent,
+            arguments: {
+              currency: arg1,
+              response: cleanedContent || content,
+            },
+          };
+        } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
+          return {
+            name: content,
+            arguments: {},
+          };
+        }
         return {
-          name: match.groups.intent,
-          arguments: {
-            currency: arg1,
-            response: cleanedContent || content,
-          },
+          // name: "greetings", arguments: {}
         };
-      } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
-        return {
-          name: content,
-          arguments: {},
-        };
-      }
-      return {
-        // name: "greetings", arguments: {}
-      };
-    })
-    .on("connect_agent", async function ({ name, arguments }) {
-      console.log("INTENT:connect_agent", name, arguments);
-      await assignToAgent(history, arguments.response);
-    })
-    .on("exchange_rates", async function ({ name, arguments }) {
-      console.log("INTENT:exchange_rates", name, arguments);
-      let text = "";
-      if (arguments.currency === "unknown" || !arguments.currency) {
-        text = await showExchangeRate();
-      } else {
-        text = await showExchangeRate(arguments.currency);
-      }
-      await respond(text, history, true);
-    })
-    .on("*", async function ({ content }) {
-      console.log("INTENT:faq_query");
-      const options = await $.session.app.options();
-      console.log("code : options.knowbase", options.knowbase);
-      let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
-      let knowledgeBaseStr = knowledgeBase
-        .map(function (nb) {
-          return `
+      })
+      .on("connect_agent", async function ({ name, arguments }) {
+        console.log("INTENT:connect_agent", name, arguments);
+        await assignToAgent(history, arguments.response);
+      })
+      .on("exchange_rates", async function ({ name, arguments }) {
+        console.log("INTENT:exchange_rates", name, arguments);
+        let text = "";
+        if (arguments.currency === "unknown" || !arguments.currency) {
+          text = await showExchangeRate();
+        } else {
+          text = await showExchangeRate(arguments.currency);
+        }
+        await respond(text, history, true);
+      })
+      .on("*", async function ({ content }) {
+        console.log("INTENT:faq_query");
+        const options = await $.session.app.options();
+        console.log("code : options.knowbase", options.knowbase);
+        let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
+        let knowledgeBaseStr = knowledgeBase
+          .map(function (nb) {
+            return `
             ${nb.title}
             ${nb.content}
           `;
-        })
-        .join("");
-      //knowledgeBaseStr = "";
-      // console.log("response.config", response.config)
-      let prompt = await create_prompt(
-        [
-          `${options.knowbase_prompt}
+          })
+          .join("");
+        //knowledgeBaseStr = "";
+        // console.log("response.config", response.config)
+        let prompt = await create_prompt(
+          [
+            `${options.knowbase_prompt}
           ${knowledgeBaseStr}
           `,
-        ],
-        history
-      );
-      let resp2 = await $.openai.next(prompt);
-      //console.log("resp2.message()", resp2.message());
-      await respond(resp2.message().content, history);
-    })
-    // .on(async function ({ content  }) {
-    //   console.log("INTENT:DEFAULT");
-    //   const options = await $.session.app.options();
-    //   console.log("code : options.knowbase", options.knowbase);
-    //   let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
-    //   let knowledgeBaseStr = knowledgeBase
-    //     .map(function (nb) {
-    //       return `
-    //         ${nb.title}
-    //         ${nb.content}
-    //       `;
-    //     })
-    //     .join("");
-    //   //knowledgeBaseStr = "";
-    //   // console.log("response.config", response.config)
-    //   let prompt = await create_prompt(
-    //     [
-    //       `${options.knowbase_prompt}
-    //       ${knowledgeBaseStr}
-    //       `,
-    //     ],
-    //     history
-    //   );
-    //   let resp2 = await $.openai.next(prompt);
-    //   //console.log("resp2.message()", resp2.message());
-    //   await respond(resp2.message().content, history);
-    // })
-    // .on("greetings", async function ({ name, arguments,content }) {
-    //   console.log("INTENT:greetings",arguments);
-    //   await respond(arguments.response || content, history);
-    // })
-    .on(async function ({ content }) {
-      console.log("INTENT:DEFAULT");
-      await respond(content, history);
-    });
+          ],
+          history
+        );
+        let resp2 = await $.openai.next(prompt);
+        //console.log("resp2.message()", resp2.message());
+        await respond(resp2.message().content, history);
+      })
+      // .on(async function ({ content  }) {
+      //   console.log("INTENT:DEFAULT");
+      //   const options = await $.session.app.options();
+      //   console.log("code : options.knowbase", options.knowbase);
+      //   let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
+      //   let knowledgeBaseStr = knowledgeBase
+      //     .map(function (nb) {
+      //       return `
+      //         ${nb.title}
+      //         ${nb.content}
+      //       `;
+      //     })
+      //     .join("");
+      //   //knowledgeBaseStr = "";
+      //   // console.log("response.config", response.config)
+      //   let prompt = await create_prompt(
+      //     [
+      //       `${options.knowbase_prompt}
+      //       ${knowledgeBaseStr}
+      //       `,
+      //     ],
+      //     history
+      //   );
+      //   let resp2 = await $.openai.next(prompt);
+      //   //console.log("resp2.message()", resp2.message());
+      //   await respond(resp2.message().content, history);
+      // })
+      // .on("greetings", async function ({ name, arguments,content }) {
+      //   console.log("INTENT:greetings",arguments);
+      //   await respond(arguments.response || content, history);
+      // })
+      .on(async function ({ content }) {
+        console.log("INTENT:DEFAULT");
+        await respond(content, history);
+      });
 }
 
 async function create_prompt(systemContents, history, instructions) {

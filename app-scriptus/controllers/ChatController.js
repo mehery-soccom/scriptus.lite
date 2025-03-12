@@ -30,6 +30,24 @@ export default class ChatController {
     return { results: [body] };
   }
 
+  @RequestMapping({ path: "/api/message/inbound", method: "post" })
+    @ResponseBody
+    async postMessageInbound({ request, response }) {
+      const { body, cookies } = request;
+  
+      const contact_id = body?.contacts?.[0]?.contactId;
+  
+      if (!contact_id) {
+        throw Error("Contact ID is missing");
+      }
+  
+      InboundQueue.queueTask(body, {
+        queue: contact_id,
+      });
+  
+      return {};
+    }
+
   @ResponseView
   @RequestMapping({ path: "/*", method: "get" })
   async defaultPage() {
