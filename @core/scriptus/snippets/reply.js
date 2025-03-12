@@ -116,11 +116,11 @@ module.exports = function (
           }
         }
 
-        adapter.sendMessage(options).then((result) => {
+        (async function(){
+          let result = await adapter.sendMessage(options);
           console.log("adapter.sendMessage success", result);
-
-          resolve(options); // resolve asynchronously | not working
-        });
+          resolve(options);
+        })();
       });
     }
 
