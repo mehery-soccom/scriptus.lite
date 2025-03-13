@@ -17,7 +17,7 @@
     "ngrok": "node ngrok.js server.js ${APP:-app}"
   },
   "engines": {
-    "node": "17.x"
+    "node": ">=17 <21"
   },
   "dependencies": {
     "@azure/identity": "^4.5.0",
