@@ -26,7 +26,7 @@ module.exports = function (
       });
 
       if (Object.keys(cleanParams).length) {
-        return new Promise(async function (resolve, reject) {
+        // return new Promise(async function (resolve, reject) {
           const ChatSession = mongon.getCollection(domain, `CHAT_SESSION`);
           const updateResult = await ChatSession.updateOne(
             { _id: mongon.Types.ObjectId(session_id) },
@@ -35,15 +35,16 @@ module.exports = function (
             }
           ); // catch ?
 
-          resolve({
-            success: updateResult.matchedCount ? true : false,
-          });
-        });
-      } else {
-        return {
-          success: false,
-        };
+        //   resolve({
+        //     success: updateResult.matchedCount ? true : false,
+        //   });
+        // });
       }
+      // else {
+      //   return {
+      //     success: false,
+      //   };
+      // }
     }
 
     async function getAppConfig(params) {
@@ -80,41 +81,45 @@ module.exports = function (
         snippet: "session",
       },
       close(params) {
-        this.promise = $.rest({
+        // this.promise = $.rest({
+        return $.rest({
           url: base_url + "/api/v1/session/close",
           headers,
         }).post({
           ...params,
           sessionId: session_id,
-        });
-        return this;
+        }).json();
+        // return this;
       },
       route(params) {
-        this.promise = $.rest({
+        // this.promise = $.rest({
+        return $.rest({
           url: base_url + "/api/v1/session/routing",
           headers,
         }).post({
           ...params,
           sessionId: session_id,
-        });
-        return this;
+        }).json();
+        // return this;
       },
       feedback(params) {
-        this.promise = saveSessionFeedback(params);
-        return this;
+        // this.promise = saveSessionFeedback(params);
+        return saveSessionFeedback(params);
+        // return this;
       },
       app({ entity, params }) {
         switch (entity) {
           case "config":
-            this.promise = getAppConfig(params);
-            break;
+            // this.promise = getAppConfig(params);
+            return getAppConfig(params);
+            // break;
           case "custom":
-            this.promise = getAppCustom(params);
-            break;
+            return getAppCustom(params);
+            // break;
           default:
-            this.promise = Promise.resolve({});
+            return Promise.resolve({});
         }
-        return this;
+        // return this;
       },
       then(callback) {
         this.promise = this.promise.then(callback);

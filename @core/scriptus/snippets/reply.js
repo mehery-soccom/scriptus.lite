@@ -66,7 +66,7 @@ module.exports = function (
 
     reply(options) {
       return this.chain(async (resolve) => {
-        console.log(`To(${contact_id}) Sending:`, options);
+        console.log(`(${contact_id}) Sending:`, options);
 
         // let handlerindex = -1;
 
@@ -119,7 +119,7 @@ module.exports = function (
 
     listen(options) {
       return this.chain(async (parentResp) => {
-        console.log(`To(${contact_id}) listening:`, options);
+        console.log(`(${contact_id}) listening:`, options);
 
         if (!options) return;
 

@@ -10,8 +10,6 @@ module.exports = function ($, { meta, server, tnt, app_id, appCode, domain, sess
   }
 
   listen._create = function () {
-    console.log(`listen._create:`, arguments);
-
     let handlerInfo = {
       type: "options",
       options: [],

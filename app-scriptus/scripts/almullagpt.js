@@ -37,16 +37,22 @@ const functions = [
   },
 ];
 
+function onSessionStart() {
+  console.log("=======================almullagpt====onSessionStart===");
+}
+
+function onSessionRouted() {
+  console.log("=======================almullagpt====onSessionRouted===");
+}
+
 /*
 async function onMessageReceive() {
-  console.log("onMessageReceive");
-  let resp = await $.reply(`Response(${$.inbound.getText()})`).listen(listenHandler);
-  console.log("Response:", resp);
+  console.log("=======================almullagpt====onMessageReceive===");
+  await $.reply(`Response(${$.inbound.getText()})`).listen(listenHandler);
 }
 async function listenHandler() {
   console.log("listenHandler");
-  let resp = await $.reply(`2 Response(${$.inbound.getText()})`);
-  console.log("Response:", resp);
+  await $.reply(`2 Response(${$.inbound.getText()})`);
 }
 */
 
@@ -299,12 +305,13 @@ async function assignToAgent(history, response) {
     await respond(response, history);
   }
   try {
-    console.log("note", resp2.message().content);
+    console.log("note >", resp2.message().content);
     await $.session.route.to.agent({
       note: resp2.message().content,
     }); // Redirect to human agent
+    console.log("agent call success");
   } catch (e) {
-    console.log("eee===");
+    console.log("agent call failure", e);
   }
 }
 

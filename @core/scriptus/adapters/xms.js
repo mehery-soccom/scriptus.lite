@@ -74,6 +74,40 @@ function XMSAdapeter({ message: messageBody }) {
     return context;
   };
 
+  this.isSessionStart = function () {
+    const event = messageBody.events?.[0] || {};
+    let result;
+    if (
+      event.sessionRouted &&
+      (event.sessionRouted?.sessionStart ||
+        !event.sessionRouted?.sourceQueue ||
+        event.sessionRouted?.sourceQueue == event.sessionRouted?.targetQueue)
+    ) {
+      result = true;
+    } else {
+      result = false;
+    }
+    if(result) console.log("isSessionStart", result);
+    return result;
+  };
+
+  this.isSessionRouted = function () {
+    const event = messageBody.events?.[0] || {};
+    let result;
+    if (
+      event.sessionRouted &&
+      (!event.sessionRouted?.sessionStart ||
+        event.sessionRouted?.sourceQueue ||
+        event.sessionRouted?.sourceQueue != event.sessionRouted?.targetQueue)
+    ) {
+      result = true;
+    } else {
+      result = false;
+    }
+    if(result) console.log("isSessionRouted", result);
+    return result;
+  };
+
   this.sendMessage = async function (options) {
     if (options.text && typeof options.text == "string") {
       options.text = {

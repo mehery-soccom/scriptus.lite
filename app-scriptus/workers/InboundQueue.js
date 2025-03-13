@@ -13,7 +13,7 @@ export default class InboundQueue {
   }
 
   async execute({ task, queue }) {
-    console.log("InboundQueue > execute", { task, queue });
+    console.log("InboundQueue > execute > " + queue, JSON.stringify(task));
 
     const contact_id = queue;
     new ChatBox({
