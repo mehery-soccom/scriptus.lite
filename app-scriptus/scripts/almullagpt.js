@@ -101,7 +101,7 @@ async function onHandleDefault() {
           //console.log("cleanedContent=",cleanedContent)
           return {
             name: match.groups.intent,
-            arguments: {
+            args: {
               currency: arg1,
               response: cleanedContent || content,
             },
@@ -109,24 +109,24 @@ async function onHandleDefault() {
         } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
           return {
             name: content,
-            arguments: {},
+            args: {},
           };
         }
         return {
-          // name: "greetings", arguments: {}
+          // name: "greetings", args: {}
         };
       })
-      .on("connect_agent", async function ({ name, arguments }) {
-        console.log("INTENT:connect_agent", name, arguments);
-        await assignToAgent(history, arguments.response);
+      .on("connect_agent", async function ({ name, args }) {
+        console.log("INTENT:connect_agent", name, args);
+        await assignToAgent(history, args.response);
       })
-      .on("exchange_rates", async function ({ name, arguments }) {
-        console.log("INTENT:exchange_rates", name, arguments);
+      .on("exchange_rates", async function ({ name, args }) {
+        console.log("INTENT:exchange_rates", name, args);
         let text = "";
-        if (arguments.currency === "unknown" || !arguments.currency) {
+        if (args.currency === "unknown" || !args.currency) {
           text = await showExchangeRate();
         } else {
-          text = await showExchangeRate(arguments.currency);
+          text = await showExchangeRate(args.currency);
         }
         await respond(text, history, true);
       })
@@ -184,9 +184,9 @@ async function onHandleDefault() {
       //   //console.log("resp2.message()", resp2.message());
       //   await respond(resp2.message().content, history);
       // })
-      // .on("greetings", async function ({ name, arguments,content }) {
-      //   console.log("INTENT:greetings",arguments);
-      //   await respond(arguments.response || content, history);
+      // .on("greetings", async function ({ name, args,content }) {
+      //   console.log("INTENT:greetings",args);
+      //   await respond(args.response || content, history);
       // })
       .on(async function ({ content }) {
         console.log("INTENT:DEFAULT");

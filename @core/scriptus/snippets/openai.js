@@ -150,7 +150,7 @@ module.exports = function (
                     this.function_call_used = funName;
                     callback({
                       name: name,
-                      arguments: (typeof args == "string" ? JSON.parse(args) : args) || {},
+                      args: (typeof args == "string" ? JSON.parse(args) : args) || {},
                       content: this.message().content,
                     });
                   }
