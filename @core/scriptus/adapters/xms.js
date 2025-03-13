@@ -110,7 +110,7 @@ function XMSAdapeter({ message: messageBody }) {
       "Content-Type": "application/json",
       // 'Content-Type': 'application/x-www-form-urlencoded',
     };
-    console.log("===>   POST : ", { url, headers, formData });
+    // console.log("===>   POST : ", { url, headers, formData });
     const response = await fetch(url, {
       method: "POST", // *GET, POST, PUT, DELETE, etc.
       mode: "cors", // no-cors, *cors, same-origin
@@ -125,7 +125,7 @@ function XMSAdapeter({ message: messageBody }) {
     if (json.statusKey == "SUCCESS") {
       console.log("xms:SUCCESS");
     } else {
-      console.log("xms:<<<<" + json.statusKey, json);
+      console.log("xms:FAILED" + json.statusKey, json);
     }
 
     return json;

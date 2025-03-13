@@ -110,8 +110,9 @@ module.exports = function (
             });
           }
         }
-        let result = await adapter.sendMessage(options);
-        console.log("adapter.sendMessage success", result);
+
+        await adapter.sendMessage(options);
+        
         return options;
       });
     }
