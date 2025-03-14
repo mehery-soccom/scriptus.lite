@@ -125,6 +125,26 @@ APP=test npm run build
 APP=test npm run server
 ```
 
+
+### Deploy on Server
+```bash
+# Install Dependencies
+npm install
+
+# Build Project
+APP=scriptus npm run build
+
+# Deploye Project
+cp -r !(dist|node_modules) /service/scriptus2/
+cp -r dist/* /service/scriptus2/
+
+# Start Serice
+APP=scriptus npm run start
+
+```
+
+
+
 ## Contributing
 Feel free to open an issue or submit a pull request at [GitHub Repository](https://github.com/bootloader/boot-node).
 
