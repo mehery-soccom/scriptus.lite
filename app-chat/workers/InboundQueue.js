@@ -8,7 +8,7 @@ ChatBox.load({
 
 @Job({ name: "inboundQueue", workers: 4 })
 export default class InboundQueue {
-  async read({ job }) {
+  async read(job, {}) {
     console.log(`reading`, job);
   }
 
