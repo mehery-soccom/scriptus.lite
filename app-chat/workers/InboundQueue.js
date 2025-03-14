@@ -12,7 +12,7 @@ export default class InboundQueue {
     console.log(`reading`, job);
   }
 
-  async execute({ task, queue }) {
+  async execute(task, { queue }) {
     console.log("InboundQueue > execute", { task, queue });
 
     const contact_id = queue;

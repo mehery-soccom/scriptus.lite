@@ -40,7 +40,7 @@ export default class UserController {
   @RequestMapping({ path: "/queue_task", method: "get" })
   async queueJob() {
     let data = { id: 1, name: "John Doe", time: Date.now() };
-    SendCampaignJob.queueTask(data);
+    SendCampaignJob.task(data);
     return [data];
   }
 }

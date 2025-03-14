@@ -8,18 +8,21 @@ ChatBox.load({
 
 @Job({ name: "inboundQueue", workers: 4 })
 export default class InboundQueue {
-  async read({ job }) {
-    console.log(`reading`, job);
+  async run(job, {}) {
+    console.log(`running...`, job);
   }
 
-  async execute({ task, queue }) {
-    console.log("InboundQueue > execute > " + queue, JSON.stringify(task));
-
+  async execute(message, { queue }) {
+    console.log("InboundQueue > execute > " + queue, JSON.stringify(message));
     const contact_id = queue;
     new ChatBox({
-      adapter: task.meta
-        ? new XMSAdapter({ message: task, contact_id })
-        : new LocalAdapter({ message: task, contact_id, appCode: "almullagpt", domain: "almullaexchange" }),
+      adapter: message.meta
+        ? new XMSAdapter({ message: message, contact_id })
+        : new LocalAdapter({ message: message, contact_id, appCode: "almullagpt", domain: "almullaexchange" }),
     }).execute();
+  }
+
+  async poll(data) {
+    console.log("data====", data);
   }
 }

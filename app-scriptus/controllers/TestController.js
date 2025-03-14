@@ -1,5 +1,6 @@
 import { Controller, RequestMapping, ResponseBody, ResponseView } from "@bootloader/core/decorators";
 import ajax from "../../@core/ajax";
+import { redis, waitForReady } from "@bootloader/redison";
 
 @Controller("/test")
 export default class TestController {
@@ -30,6 +31,16 @@ export default class TestController {
   @ResponseBody
   async postMessage() {
     return [{ id: 1, name: "John Doe" }];
+  }
+
+  @RequestMapping({ path: "/api/queue", method: "get" })
+  @ResponseBody
+  async getQueue() {
+    console.log("ppppppppps");
+    await redis.lpush("eq:app:XMS:topic:TEST_TOPIC", JSON.stringify({ data: {motp : "235"} }));
+    console.log("pppppppppe");
+    //redis.keys("*").then(console.log);
+    return [{ id: 1, name: "John Queue" }];
   }
 
   @ResponseView

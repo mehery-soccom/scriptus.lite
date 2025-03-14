@@ -24,36 +24,36 @@ export default class ChatController {
       contact_id = crypto.randomUUID();
       response.cookie("contact_id", contact_id, { maxge: 900000, httpOnly: true });
     }
-    InboundQueue.queueTask(body, {
+    InboundQueue.task(body, {
       queue: contact_id,
     });
     return { results: [body] };
   }
 
   @RequestMapping({ path: "/api/message/inbound", method: "post" })
-    @ResponseBody
-    async postMessageInbound({ request, response }) {
-      const { body, cookies } = request;
-  
-      const contact_id = body?.contacts?.[0]?.contactId;
-  
-      if (!contact_id) {
-        throw Error("Contact ID is missing");
-      }
-  
-      InboundQueue.queueTask(body, {
-        queue: contact_id,
-      });
-  
-      return {};
+  @ResponseBody
+  async postMessageInbound({ request, response }) {
+    const { body, cookies } = request;
+
+    const contact_id = body?.contacts?.[0]?.contactId;
+
+    if (!contact_id) {
+      throw Error("Contact ID is missing");
     }
+
+    InboundQueue.task(body, {
+      queue: contact_id,
+    });
+
+    return {};
+  }
 
   @ResponseView
   @RequestMapping({ path: "/*", method: "get" })
   async defaultPage() {
     return "home";
   }
-  
+
   @ResponseBody
   @RequestMapping({ path: "/api/messages", method: "get" })
   async getMessage({ request: { body, cookies }, headers }) {
@@ -65,6 +65,4 @@ export default class ChatController {
     let msg = await RQueue({ key: contact_id }).pop();
     return { results: msg ? [msg] : [] };
   }
-
-
 }
