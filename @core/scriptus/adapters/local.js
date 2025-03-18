@@ -1,7 +1,7 @@
 import { redis, RQueue, waitForReady } from "@bootloader/redison";
 
 var scriptusDomain = config.getIfPresent("mry.scriptus.domain");
-var scriptusCode = config.getIfPresent("mry.scriptus.code");
+var scriptusQueue = config.getIfPresent("mry.scriptus.queue");
 
 function LocalAdapeter({ message, contact_id, sessionId, appCode = "my_bot", domain = "default" }) {
   //{ author: "Bot", type: "text", data: { text: `Response(${$.inbound.data.text})` }
@@ -79,5 +79,11 @@ function LocalAdapeter({ message, contact_id, sessionId, appCode = "my_bot", dom
   this.sendMessage = function (options) {
     RQueue({ key: contact_id }).push({ author: "Bot", type: "text", data: { text: options?.text?.body } });
   };
+
+  this.routeSession = function(options){
+    scriptusQueue = options.queue;
+    return {}
+  }
+
 }
 module.exports = LocalAdapeter;

@@ -1,20 +1,12 @@
-const config = require("@bootloader/config");
 const mongon = require("@bootloader/mongon");
-var secretKey = config.getIfPresent("mry.scriptus.secret");
 
 const ClientAppStore = require("../store/ClientAppStore");
 
 module.exports = function (
   $,
-  { server, tnt, app_id, appCode, domain, contact_id, channel_id, session, userData, session_id, execute }
+  { server, tnt, app_id, appCode, domain, contact_id, channel_id, session, userData, session_id, execute, adapter }
 ) {
   function session() {
-    var base_url = "https://" + domain + "." + server + "/xms";
-    var headers = {
-      "x-api-key": secretKey,
-      "x-api-id": app_id,
-    };
-
     async function saveSessionFeedback(params) {
       const allowedParams = ["score", "tag", "review"];
 
@@ -82,28 +74,18 @@ module.exports = function (
       },
       close(params) {
         // this.promise = $.rest({
-        return $.rest({
-          url: base_url + "/api/v1/session/close",
-          headers,
-        })
-          .post({
-            ...params,
-            sessionId: session_id,
-          })
-          .json();
+        return adapter.closeSession({
+          ...params,
+          sessionId: session_id,
+        });
         // return this;
       },
       route(params) {
         // this.promise = $.rest({
-        return $.rest({
-          url: base_url + "/api/v1/session/routing",
-          headers,
-        })
-          .post({
-            ...params,
-            sessionId: session_id,
-          })
-          .json();
+        return adapter.routeSession({
+          ...params,
+          sessionId: session_id,
+        });
         // return this;
       },
       feedback(params) {
