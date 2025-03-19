@@ -34,10 +34,7 @@ const webChatSchema = mongon.Schema({
   }]
 }, {
   // Add createdAt and updatedAt timestamps automatically
-  timestamps: true
+  timestamps: true , collection : "webchats"
 });
 
-// Create and export the model
-const WebChat = mongon.model('WebChat', webChatSchema);
-
-module.exports = { WebChat };
+module.exports = { webChatSchema };

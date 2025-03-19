@@ -9,7 +9,6 @@ const { connectDB } = require("../@core/scriptus/clients")
 const app = express();
 //app.use(express.static("public"));
 
-connectDB()
 loadDb()
 
 global.appRoot = path.resolve(__dirname);

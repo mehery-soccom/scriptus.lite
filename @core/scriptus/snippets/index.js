@@ -13,7 +13,12 @@ function Snippets(context) {
     };
     Object.keys(STORE).map(function (name) {
       let snippet = STORE[name];
-      $[name] = snippet($, _context);
+      try { 
+        $[name] = snippet($, _context);
+      } catch (e) {
+        console.error(`Snippet lead fail for ${name}`,e);
+      }
+      
     });
     return $;
   };

@@ -1,5 +1,6 @@
-const { WebChat } = require("../model/WebChatModel");
+const { sebChatSchema, webChatSchema } = require("../model/WebChatModel");
 const { openai } = require("../clients");
+const mongon = require("@bootloader/mongon");
 /**
  * Retrieves the 5 most recent web chats for a specific contact
  * @param {string} contactId - The ID of the contact to retrieve chats for
@@ -7,6 +8,7 @@ const { openai } = require("../clients");
  */
 async function getRecentWebChats(contactId) {
   try {
+    const WebChat = mongon.model(webChatSchema)
     const recentChats = await WebChat.find(
       { contactId },
       {
