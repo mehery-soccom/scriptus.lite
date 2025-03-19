@@ -1,3 +1,4 @@
+const config = require("@bootloader/config");
 import { redis, RQueue, waitForReady } from "@bootloader/redison";
 
 var scriptusDomain = config.getIfPresent("mry.scriptus.domain");
