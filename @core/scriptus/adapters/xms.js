@@ -1,18 +1,32 @@
 const fetch = require("node-fetch");
 const config = require("@bootloader/config");
+const ajax = require("../../ajax");
+
 var secretKey = config.getIfPresent("mry.scriptus.secret");
+var scriptusServer = config.getIfPresent("mry.scriptus.server");
+
 var messageTypes = ["template", "audio", "document", "image", "location", "text", "video", "voice", "contacts"];
 
 function XMSAdapeter({ message: messageBody }) {
+  let domain = messageBody.meta.domain;
+  let server = messageBody.meta.server || scriptusServer;
+  let appId = messageBody.meta.appId;
+
+  var base_url = "https://" + domain + "." + server + "/xms";
+  var headers = {
+    "x-api-key": secretKey,
+    "x-api-id": appId,
+  };
+
   this.toContext = function () {
     var context = {
       meta: messageBody.meta,
       //Meta
       isDebug: messageBody.meta.debug,
-      server: messageBody.meta.server || server,
-      tnt: messageBody.meta.domain,
-      domain: messageBody.meta.domain,
-      app_id: messageBody.meta.appId,
+      server: server,
+      tnt: domain,
+      domain: domain,
+      app_id: appId,
       appCode: messageBody.meta.appCode,
       appType: messageBody.meta.appType,
       //Contact
@@ -87,7 +101,7 @@ function XMSAdapeter({ message: messageBody }) {
     } else {
       result = false;
     }
-    if(result) console.log("isSessionStart", result);
+    if (result) console.log("isSessionStart", result);
     return result;
   };
 
@@ -104,7 +118,7 @@ function XMSAdapeter({ message: messageBody }) {
     } else {
       result = false;
     }
-    if(result) console.log("isSessionRouted", result);
+    if (result) console.log("isSessionRouted", result);
     return result;
   };
 
@@ -163,6 +177,24 @@ function XMSAdapeter({ message: messageBody }) {
     }
 
     return json;
+  };
+
+  this.routeSession = async function (options) {
+    return await ajax({
+      url: base_url + "/api/v1/session/routing",
+      headers,
+    })
+      .post(options)
+      .json();
+  };
+
+  this.closeSession = async function (options) {
+    return $.rest({
+      url: base_url + "/api/v1/session/close",
+      headers,
+    })
+      .post(options)
+      .json();
   };
 }
 module.exports = XMSAdapeter;
