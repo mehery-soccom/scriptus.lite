@@ -3,7 +3,7 @@ import { redis, RQueue, waitForReady } from "@bootloader/redison";
 var scriptusDomain = config.getIfPresent("mry.scriptus.domain");
 var scriptusQueue = config.getIfPresent("mry.scriptus.queue");
 
-function LocalAdapeter({ message, contact_id, sessionId, appCode = "my_bot", domain = "default" }) {
+function LocalAdapeter({ message, contact_id, sessionId, appCode = "my_bot", domain }) {
   //{ author: "Bot", type: "text", data: { text: `Response(${$.inbound.data.text})` }
 
   this.toContext = function () {
