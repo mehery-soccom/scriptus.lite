@@ -1,5 +1,5 @@
-const { openai } = require("../clients");
-const { getExeTime } = require("../../utils/exetime");
+const { openai } = require("../models/clients");
+const { getExeTime } = require("../../@core/utils/exetime");
 const { pipeline } = require("@huggingface/transformers");
 async function generateEmbeddingAllMini(text) {
   try {
@@ -44,7 +44,7 @@ async function information_not_available(){
   You can reach out to us on email: Help@almullaexchange.com .`
 }
 
-async function getModelResponse(relevantInfo, userQuestion, rephrasedQuestion, isOpenAi) {
+async function getModelResponse(relevantInfo, rephrasedQuestion) {
   let start = Date.now();
   const systemPrompt = `
 You are an AI assistant for Al Mulla Exchange.

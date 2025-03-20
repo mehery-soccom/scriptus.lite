@@ -1,7 +1,7 @@
 const { MetricType } = require("@zilliz/milvus2-sdk-node");
-const { vectorDb } = require("../clients")
+const { vectorDb } = require("../models/clients")
 const { generateEmbeddingOpenAi , generateEmbeddingAllMini } = require("./gpt");
-const { getExeTime } = require("../../utils/exetime");
+const { getExeTime } = require("../../@core/utils/exetime");
 const { rephraseWithContext } = require("./webChat");
 async function loadDb(){
   await vectorDb.loadCollection({
@@ -47,17 +47,16 @@ async function semanticSearch(collectionName, embedding,output_fields,field_name
  * @param {string} collectionName - Name of the Milvus collection
  * @returns {Promise<Array>} - Top matching context documents
  */
-async function performRagopenAi(userQuestion, collectionName, contactId) {
+async function performRagopenAi(rephrasedQuestion) {
   try {
     // 1. Generate embedding for the user question
     let start = Date.now();
-    console.log("Generating embedding for user question...");
-    const rephrasedQuestion = await rephraseWithContext(contactId,userQuestion);
+    
     const questionEmbedding = await generateEmbeddingOpenAi(rephrasedQuestion);
     
     // 2. Perform semantic search to find similar questions
     console.log("Performing semantic search...");
-    const searchResults = await semanticSearch(collectionName, questionEmbedding, ["question", "answer"], "question_dense_vector");
+    const searchResults = await semanticSearch("qaSchema", questionEmbedding, ["question", "answer"], "question_dense_vector");
     
     // 3. Format results for passing to the fine-tuned model
     const topMatches = searchResults.map(result => ({
@@ -68,9 +67,7 @@ async function performRagopenAi(userQuestion, collectionName, contactId) {
     
     console.log(`Found ${topMatches.length} relevant matches`);
     await getExeTime("RagOpenAi",start);
-    return { topMatches , rephrasedQuestion };
-                
-    // The caller can then pass these top matches to their fine-tuned model
+    return topMatches;
   } catch (error) {
     console.error("Error in RAG pipeline:", error);
     throw error;

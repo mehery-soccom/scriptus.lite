@@ -1,6 +1,12 @@
-const { sebChatSchema, webChatSchema } = require("../model/WebChatModel");
-const { openai } = require("../clients");
+const { sebChatSchema, webChatSchema } = require("../models/WebChatModel");
+const { openai } = require("../models/clients");
 const mongon = require("@bootloader/mongon");
+async function saveConversation(convo) {
+  const WebChat = mongon.model(webChatSchema);
+  const newWebChat = new WebChat(convo);
+  const savedChat = await newWebChat.save();
+  return savedChat;
+}
 /**
  * Retrieves the 5 most recent web chats for a specific contact
  * @param {string} contactId - The ID of the contact to retrieve chats for
@@ -8,7 +14,7 @@ const mongon = require("@bootloader/mongon");
  */
 async function getRecentWebChats(contactId) {
   try {
-    const WebChat = mongon.model(webChatSchema)
+    const WebChat = mongon.model(webChatSchema);
     const recentChats = await WebChat.find(
       { contactId },
       {
@@ -16,7 +22,7 @@ async function getRecentWebChats(contactId) {
         contactId: 1,
         messages: 1,
         timestamp: 1,
-        rephrasedQuestion : 1,
+        rephrasedQuestion: 1,
         _id: 0,
       }
     )
@@ -38,7 +44,9 @@ function formatChatHistory(chats) {
   return chats
     .map((chat, index) => {
       const date = new Date(chat.timestamp).toLocaleString();
-      return `Conversation ${index + 1} (${date}):\nUser: ${chat.rephrasedQuestion}\nAssistant: ${chat.messages.assistant}\n`;
+      return `Conversation ${index + 1} (${date}):\nUser: ${chat.rephrasedQuestion}\nAssistant: ${
+        chat.messages.assistant
+      }\n`;
     })
     .join("\n");
 }
@@ -51,7 +59,10 @@ function formatChatHistory(chats) {
 async function rephraseWithContext(contactId, currentQuestion) {
   try {
     // Get recent chat history
+    console.log(`in rephraser : ${contactId}`);
+    console.log(`in rephraser : ${currentQuestion}`);
     const recentChats = await getRecentWebChats(contactId);
+    console.log(`recent chats : ${JSON.stringify(recentChats)}`);
     if (recentChats.length === 0) return currentQuestion;
     // Format chat history as string
     const chatHistoryString = formatChatHistory(recentChats);
@@ -79,21 +90,21 @@ async function rephraseWithContext(contactId, currentQuestion) {
       ✅ Rephrased: What is Visa card remittance service? (Do not inject any country)
     `;
 
-//     const userPrompt = `
-// ### Chat History
-// ${chatHistoryString}
+    //     const userPrompt = `
+    // ### Chat History
+    // ${chatHistoryString}
 
-// ### Current User Question
-// ${currentQuestion}
+    // ### Current User Question
+    // ${currentQuestion}
 
-// Rephrase the user question based on the context provided.
-// - If the chat history contains a clear target country, add it to the question.
-// - If the chat history contains multiple target countries add the latest one to the question.
-// - If the chat history contains relevant transfer fees, charges, or deductions, maintain that context.
-// - If the context is unclear, leave the question unchanged.
-// - Focus on making the question clear and concise without adding assumptions.
-// `;
-const userPrompt = `
+    // Rephrase the user question based on the context provided.
+    // - If the chat history contains a clear target country, add it to the question.
+    // - If the chat history contains multiple target countries add the latest one to the question.
+    // - If the chat history contains relevant transfer fees, charges, or deductions, maintain that context.
+    // - If the context is unclear, leave the question unchanged.
+    // - Focus on making the question clear and concise without adding assumptions.
+    // `;
+    const userPrompt = `
 ### Chat History
 ${chatHistoryString}
 
@@ -137,7 +148,7 @@ Rephrase the user's question using the provided context.
 
     // Extract the rephrased question
     // const rephrasedQuestion = completion.choices[0].message.content.trim();
-    
+
     const rephrasedQuestion = JSON.parse(completion.choices[0].message.content).rephrasedQuestion;
     console.log(`Original: "${currentQuestion}"\nRephrased: "${rephrasedQuestion}"`);
     console.log(completion.usage);
@@ -148,4 +159,4 @@ Rephrase the user's question using the provided context.
   }
 }
 
-module.exports = { getRecentWebChats, rephraseWithContext };
+module.exports = { getRecentWebChats, rephraseWithContext , saveConversation };

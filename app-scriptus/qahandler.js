@@ -1,4 +1,4 @@
-const { performRagAllMini, performRagopenAi } = require("../@core/scriptus/services/rag")
-const { getModelResponse } = require("../@core/scriptus/services/gpt")
-const { WebChat } = require("../@core/scriptus/model/WebChatModel")
+const { performRagAllMini, performRagopenAi } = require("./services/rag")
+const { getModelResponse } = require("./services/gpt")
+const { WebChat } = require("./models/WebChatModel")
 
