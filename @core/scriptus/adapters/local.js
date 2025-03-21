@@ -2,9 +2,9 @@ const config = require("@bootloader/config");
 import { redis, RQueue, waitForReady } from "@bootloader/redison";
 
 var scriptusDomain = config.getIfPresent("mry.scriptus.domain");
-var scriptusQueue = config.getIfPresent("mry.scriptus.queue");
+var scriptusQueue = config.getIfPresent("mry.scriptus.queue") || "my_bot";
 
-function LocalAdapeter({ message, contact_id, sessionId, appCode = "my_bot", domain }) {
+function LocalAdapeter({ message, contact_id, sessionId, appCode = scriptusQueue, domain = scriptusDomain }) {
   //{ author: "Bot", type: "text", data: { text: `Response(${$.inbound.data.text})` }
 
   this.toContext = function () {
@@ -14,9 +14,9 @@ function LocalAdapeter({ message, contact_id, sessionId, appCode = "my_bot", dom
       isDebug: true,
       server: null,
       tnt: domain,
-      domain: scriptusDomain,
+      domain: domain,
       app_id: "0",
-      appCode: scriptusCode,
+      appCode: appCode,
       appType: "bot",
       //Contact
       contact_id: contact_id,
@@ -81,10 +81,9 @@ function LocalAdapeter({ message, contact_id, sessionId, appCode = "my_bot", dom
     RQueue({ key: contact_id }).push({ author: "Bot", type: "text", data: { text: options?.text?.body } });
   };
 
-  this.routeSession = function(options){
+  this.routeSession = function (options) {
     scriptusQueue = options.queue;
-    return {}
-  }
-
+    return {};
+  };
 }
 module.exports = LocalAdapeter;
