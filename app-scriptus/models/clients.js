@@ -1,15 +1,14 @@
 const { MilvusClient } = require('@zilliz/milvus2-sdk-node');
 const { OpenAI } = require("openai");
-const mongoose = require('mongoose');
 const config = require("@bootloader/config")
 
-const address = config.get("milvus.url")
-const token = config.get("milvus.token")
+const address = config.getIfPresent("milvus.url")
+const token = config.getIfPresent("milvus.token")
 // console.log(`milvus url = ${address}`)
 // console.log(`milvus token = ${token}`)
 const vectorDb = new MilvusClient({address, token});
 
-const openAiToken = config.get("openai.token")
+const openAiToken = config.getIfPresent("openai.token")
 const openai = new OpenAI({ apiKey: openAiToken });
 
 
