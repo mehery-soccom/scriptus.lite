@@ -1,15 +1,17 @@
 const { MetricType } = require("@zilliz/milvus2-sdk-node");
-const { vectorDb } = require("../models/clients")
-const { generateEmbeddingOpenAi , generateEmbeddingAllMini } = require("./gpt");
+const { vectorDb } = require("../models/clients");
+const { generateEmbeddingOpenAi, generateEmbeddingAllMini } = require("./gpt");
 const { getExeTime } = require("../../@core/utils/exetime");
 const { rephraseWithContext } = require("./webChat");
-async function loadDb(){
-  await vectorDb.loadCollection({
-    collection_name: "qaSchema"
-  });
-  await vectorDb.loadCollection({
-    collection_name: "fast_semantic_search"
-  });
+async function loadDb() {
+  if (vectorDb) {
+    await vectorDb.loadCollection({
+      collection_name: "qaSchema",
+    });
+    await vectorDb.loadCollection({
+      collection_name: "fast_semantic_search",
+    });
+  }
 }
 /**
  * Performs semantic search in Milvus using the provided embedding vector
@@ -18,10 +20,10 @@ async function loadDb(){
  * @param {number} topK - Number of results to return
  * @returns {Promise<Array>} - Array of search results
  */
-async function semanticSearch(collectionName, embedding,output_fields,field_name, topK = 2,filter="") {
+async function semanticSearch(collectionName, embedding, output_fields, field_name, topK = 2, filter = "") {
   try {
     let start = Date.now();
-    
+
     // Perform vector similarity search
     const searchResult = await vectorDb.search({
       collection_name: collectionName,
@@ -30,10 +32,10 @@ async function semanticSearch(collectionName, embedding,output_fields,field_name
       field_name,
       limit: topK,
       output_fields,
-      metric_type: MetricType.COSINE
+      metric_type: MetricType.COSINE,
     });
-    console.log(`SEARCH RESULTS : `,JSON.stringify(searchResult));
-    await getExeTime("VectorSearch",start)
+    console.log(`SEARCH RESULTS : `, JSON.stringify(searchResult));
+    await getExeTime("VectorSearch", start);
     return searchResult.results;
   } catch (error) {
     console.error("Error performing semantic search:", error);
@@ -51,55 +53,67 @@ async function performRagopenAi(rephrasedQuestion) {
   try {
     // 1. Generate embedding for the user question
     let start = Date.now();
-    
+
     const questionEmbedding = await generateEmbeddingOpenAi(rephrasedQuestion);
-    
+
     // 2. Perform semantic search to find similar questions
     console.log("Performing semantic search...");
-    const searchResults = await semanticSearch("qaSchema", questionEmbedding, ["question", "answer"], "question_dense_vector");
-    
+    const searchResults = await semanticSearch(
+      "qaSchema",
+      questionEmbedding,
+      ["question", "answer"],
+      "question_dense_vector"
+    );
+
     // 3. Format results for passing to the fine-tuned model
-    const topMatches = searchResults.map(result => ({
+    const topMatches = searchResults.map((result) => ({
       question: result.question,
       answer: result.answer,
-      score: result.score
+      score: result.score,
     }));
-    
+
     console.log(`Found ${topMatches.length} relevant matches`);
-    await getExeTime("RagOpenAi",start);
+    await getExeTime("RagOpenAi", start);
     return topMatches;
   } catch (error) {
     console.error("Error in RAG pipeline:", error);
     throw error;
   }
 }
-async function performRagAllMini(userQuestion,collectionName, contactId) {
+async function performRagAllMini(userQuestion, collectionName, contactId) {
   try {
     // 1. Generate embedding for the user question
     let start = Date.now();
     console.log("Generating embedding for user question...");
-    const rephrasedQuestion = await rephraseWithContext(contactId,userQuestion);
+    const rephrasedQuestion = await rephraseWithContext(contactId, userQuestion);
     const questionEmbedding = await generateEmbeddingAllMini(userQuestion);
-    
+
     // 2. Perform semantic search to find similar questions
     console.log("Performing semantic search...");
     const park = "kedar_mehery_xyz";
-    const searchResults = await semanticSearch(collectionName, questionEmbedding, ["knowledgebase"], "fast_dense_vector",2,`tenant_partition_key == "${park}"`);
-    
+    const searchResults = await semanticSearch(
+      collectionName,
+      questionEmbedding,
+      ["knowledgebase"],
+      "fast_dense_vector",
+      2,
+      `tenant_partition_key == "${park}"`
+    );
+
     // 3. Format results for passing to the fine-tuned model
-    const topMatches = searchResults.map(result => ({
-      knowledgebase : result.knowledgebase,
-      score: result.score
+    const topMatches = searchResults.map((result) => ({
+      knowledgebase: result.knowledgebase,
+      score: result.score,
     }));
-    
+
     console.log(`Found ${topMatches.length} relevant matches`);
-    await getExeTime("RagAllMini",start);
-    return { topMatches , rephrasedQuestion };
-                
+    await getExeTime("RagAllMini", start);
+    return { topMatches, rephrasedQuestion };
+
     // The caller can then pass these top matches to their fine-tuned model
   } catch (error) {
     console.error("Error in RAG pipeline:", error);
     throw error;
   }
 }
-module.exports = { performRagopenAi , performRagAllMini , semanticSearch , loadDb };
+module.exports = { performRagopenAi, performRagAllMini, semanticSearch, loadDb };
