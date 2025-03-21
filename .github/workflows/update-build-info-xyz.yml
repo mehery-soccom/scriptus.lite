@@ -29,10 +29,10 @@ jobs:
           git fetch origin build-xyz-nodebot
           git merge origin/build-xyz-nodebot -m "Merge build-xyz-nodebot into build-xyz"
 
-      # Step 4: Generate json/build.info.json
-      - name: Generate json/build.info.json
+      # Step 4: Generate public/build.info.json
+      - name: Generate public/build.info.json
         run: |
-          cat <<EOF > json/build.info.json
+          cat <<EOF > public/build.info.json
           {
             "lastBuildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "commitHash": "${{ github.sha }}",
@@ -43,13 +43,13 @@ jobs:
           EOF
         shell: bash
 
-      # Step 5: Commit and Push json/build.info.json to build-xyz
-      - name: Commit and Push json/build.info.json to build-xyz
+      # Step 5: Commit and Push public/build.info.json to build-xyz
+      - name: Commit and Push public/build.info.json to build-xyz
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add json/build.info.json
-          git commit -m "Update json/build.info.json in build-xyz"
+          git add public/build.info.json
+          git commit -m "Update public/build.info.json in build-xyz"
           git push origin build-xyz
 
       # Step 6: Merge build-xyz into build-xyz-nodebot
