@@ -42,10 +42,10 @@ module.exports = function OpenAIService(options = {}) {
     //console.log("doc===",_options,"====",doc)
     let config = {
       provider: provider || options.provider || doc?.value?.provider || "OPENAI",
-      authType: authType || options.authType || doc.value.azure.authType || "KEY",
-      model: model || options.model || doc.value?.model || "gpt-3.5-turbo",
-      deployment: deployment || options.deployment || doc.value?.azure?.deployment || "gpt-3.5-turbo",
-      apiVersion: apiVersion || options.apiVersion || doc.value?.azure?.apiVersion || "2024-10-01",
+      authType: authType || options.authType || doc?.value?.azure?.authType || "KEY",
+      model: model || options.model || doc?.value?.model || "gpt-3.5-turbo",
+      deployment: deployment || options.deployment || doc?.value?.azure?.deployment || "gpt-3.5-turbo",
+      apiVersion: apiVersion || options.apiVersion || doc?.value?.azure?.apiVersion || "2024-10-01",
     };
 
     if (doc?.value?.provider == "AZURE") {
