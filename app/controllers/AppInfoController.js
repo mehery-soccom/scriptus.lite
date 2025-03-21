@@ -4,7 +4,7 @@ const { requireOptional } = require("@bootloader/utils");
 import { Controller, RequestMapping, ResponseBody, ResponseView } from "@bootloader/core/decorators";
 
 var pjson = requireOptional(".../../../package.json|../../package.json|../package.json|./package.json");
-var bjson = requireOptional("../../public/build.info.json");
+var bjson = requireOptional("../../../public/build.info.json|../../public/build.info.json|../public/build.info.json|./public/build.info.json");
 const UP_STAMP = new Date();
 const UP_TIME = Date.now();
 
