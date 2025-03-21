@@ -14,8 +14,8 @@ const defaulOpenAiConfig = {
   provider: "OPENAI",
 };
 
-module.exports = function OpenAIClient(options = {}, extOptions = {}) {
-  let { domainbox, domain, useGlobalConfig } = extOptions;
+module.exports = function OpenAIService(options = {}) {
+  let { domainbox, domain, useGlobalConfig, key } = options;
   domain = domain || context.getTenant();
   domainbox = domainbox || cachebox({ name: "domainbox", domain: domain, ttl: 60 * 60 * 24 * 1 });
   let openaiContext = domainbox.context("context.openai");
@@ -23,7 +23,6 @@ module.exports = function OpenAIClient(options = {}, extOptions = {}) {
   let $config;
   this.getConfig = async function () {
     if (!$config) {
-      let key = (typeof options == "string" ? options : options?.key) || undefined;
       $config = TokenKeysStore.get({
         domain,
         type: "gpt",

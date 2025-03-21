@@ -1,4 +1,4 @@
-const OpenAIClient = require("../clients/OpenAIClient");
+const OpenAIService = require("../clients/OpenAIService");
 
 // const { DEFAULT_INTENT_SERVICE_KEY } = require("../service/settings");
 const DEFAULT_INTENT_SERVICE_KEY = "DEFAULT_INTENT_SERVICE_KEY";
@@ -7,15 +7,13 @@ module.exports = function (
   $,
   { server, tnt, app_id, domain, contact_id, channel_id, session, userData, inbound, execute, setting, domainbox }
 ) {
-  function openai(_options) {
-    let openAIClient = new OpenAIClient(_options || setting(DEFAULT_INTENT_SERVICE_KEY) || {}, {
-      domain,
-      domainbox,
-    });
+  function openai(_options = {}) {
+    let options = typeof _options == "string" ? { key: _options } : _options || {};
+    let openAIService = new OpenAIService({ domain, domainbox, ...options });
 
     return {
       async init(initOptions = {}) {
-        return await openAIClient.init(initOptions);
+        return await openAIService.init(initOptions);
       },
       async chat_completions_create(a, ...args) {
         let { client, config } = await this.init({
