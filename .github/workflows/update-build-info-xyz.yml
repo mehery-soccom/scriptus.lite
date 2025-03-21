@@ -1,0 +1,61 @@
+name: Sync and Generate Build Info
+
+on:
+  push:
+    branches:
+      - build-xyz  # Trigger on push to the build-xyz branch
+
+jobs:
+  sync-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository with full history
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all commit history
+
+      # Step 2: Pull latest changes from build-xyz
+      - name: Pull latest changes from build-xyz
+        run: |
+          git fetch origin +refs/heads/*:refs/remotes/origin/*
+          git checkout build-xyz
+          git pull origin build-xyz
+
+      # Step 3: Merge build-xyz-nodebot into build-xyz
+      - name: Merge build-xyz-nodebot into build-xyz
+        run: |
+          git fetch origin build-xyz-nodebot
+          git merge origin/build-xyz-nodebot -m "Merge build-xyz-nodebot into build-xyz"
+
+      # Step 4: Generate public/build.info.json
+      - name: Generate public/build.info.json
+        run: |
+          cat <<EOF > public/build.info.json
+          {
+            "lastBuildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "commitHash": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "repository": "${{ github.repository }}",
+            "commitMessage": "$(git log -1 --pretty=format:'%s' | sed 's/"/\\"/g')"
+          }
+          EOF
+        shell: bash
+
+      # Step 5: Commit and Push public/build.info.json to build-xyz
+      - name: Commit and Push public/build.info.json to build-xyz
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/build.info.json
+          git commit -m "Update public/build.info.json in build-xyz"
+          git push origin build-xyz
+
+      # Step 6: Merge build-xyz into build-xyz-nodebot
+      - name: Merge build-xyz into build-xyz-nodebot
+        run: |
+          git checkout build-xyz-nodebot || git checkout -b build-xyz-nodebot
+          git fetch origin build-xyz
+          git merge origin/build-xyz -m "Merge build-xyz into build-xyz-nodebot"
+          git push origin build-xyz-nodebot

@@ -1,4 +1,4 @@
-# BootExpress
+# scriptus-lite
 
 BootExpress is a lightweight, Spring Boot-inspired Node.js framework that simplifies backend development with decorators, modular routing, and built-in support for dependency injection. It is designed to provide an intuitive structure for building scalable web applications using Express and Babel.
 

@@ -18,7 +18,7 @@ export default class InboundQueue {
     new ChatBox({
       adapter: message.meta
         ? new XMSAdapter({ message: message, contact_id })
-        : new LocalAdapter({ message: message, contact_id, appCode: "almullagpt", domain: "almullaexchange" }),
+        : new LocalAdapter({ message: message, contact_id }),
     }).execute();
   }
 

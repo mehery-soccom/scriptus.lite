@@ -4,10 +4,12 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require('path');
 const timeout = require("connect-timeout");
-
-
+const { loadDb } = require("./services/rag")
+const { connectDB } = require("./models/clients")
 const app = express();
 //app.use(express.static("public"));
+
+loadDb()
 
 global.appRoot = path.resolve(__dirname);
 app.set("view engine", "ejs");
