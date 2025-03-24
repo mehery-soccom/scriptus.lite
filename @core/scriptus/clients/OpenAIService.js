@@ -10,8 +10,8 @@ const { OpenAI, AzureOpenAI } = requireOptional("openai");
 const azureIdentity = requireOptional("@azure/identity"); //{ ClientSecretCredential }
 
 const defaulOpenAiConfig = {
-  apiKey: config.getIfPresent("openai.token"),
-  provider: "OPENAI",
+  secret: { apiKey: config.getIfPresent("openai.token") },
+  value: { provider: "OPENAI" },
 };
 
 function OpenAIService(options = {}) {
