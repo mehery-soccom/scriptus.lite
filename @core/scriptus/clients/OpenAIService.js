@@ -14,7 +14,7 @@ const defaulOpenAiConfig = {
   provider: "OPENAI",
 };
 
-module.exports = function OpenAIService(options = {}) {
+function OpenAIService(options = {}) {
   let { domainbox, domain, useGlobalConfig, key } = options;
   domain = domain || context.getTenant();
   domainbox = domainbox || cachebox({ name: "domainbox", domain: domain, ttl: 60 * 60 * 24 * 1 });
@@ -97,4 +97,8 @@ module.exports = function OpenAIService(options = {}) {
       throw "Error ( No OpenAI Provider )";
     }
   };
-};
+}
+
+OpenAIService.OpenAIService = OpenAIService;
+
+module.exports = OpenAIService;
