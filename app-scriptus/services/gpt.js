@@ -1,7 +1,9 @@
 const { requireOptional } = require("@bootloader/utils");
-const { openai } = require("../models/clients");
+// const { openai } = require("../models/clients");
 const { getExeTime } = require("../../@core/utils/exetime");
 const { pipeline } = requireOptional("@huggingface/transformers");
+const OpenAIService = require("../../@core/scriptus/clients/OpenAIService")
+
 
 async function generateEmbeddingAllMini(text) {
   try {
@@ -24,6 +26,8 @@ async function generateEmbeddingAllMini(text) {
 
 async function generateEmbeddingOpenAi(text, dims = 512) {
   try {
+    let service = new OpenAIService({ useGlobalConfig : true })
+    let { client:openai , config } = await service.init()
     let start = Date.now();
     const response = await openai.embeddings.create({
       model: "text-embedding-3-small", // You can replace with your preferred embedding model
@@ -68,6 +72,8 @@ Prefer answering if the meaning is clear, even if wording differs.
 `;
   console.log(`SYStem prompt : ${systemPrompt}`);
   console.log(`user prompt  : ${userPrompt}`);
+  let service = new OpenAIService({ useGlobalConfig : true })
+  let { client:openai , config } = await service.init()
   const completion = await openai.chat.completions.create({
     model: "ft:gpt-4o-mini-2024-07-18:personal:remittance-bot-v2:B4QmFVQU",
     messages: [

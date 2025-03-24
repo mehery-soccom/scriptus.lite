@@ -10,11 +10,11 @@ const { OpenAI, AzureOpenAI } = requireOptional("openai");
 const azureIdentity = requireOptional("@azure/identity"); //{ ClientSecretCredential }
 
 const defaulOpenAiConfig = {
-  apiKey: config.getIfPresent("openai.token"),
-  provider: "OPENAI",
+  secret: { apiKey: config.getIfPresent("openai.token") },
+  value: { provider: "OPENAI" },
 };
 
-module.exports = function OpenAIService(options = {}) {
+function OpenAIService(options = {}) {
   let { domainbox, domain, useGlobalConfig, key } = options;
   domain = domain || context.getTenant();
   domainbox = domainbox || cachebox({ name: "domainbox", domain: domain, ttl: 60 * 60 * 24 * 1 });
@@ -39,7 +39,7 @@ module.exports = function OpenAIService(options = {}) {
   this.init = async function (initOptions = {}) {
     let { provider, authType, deployment, apiVersion, model } = initOptions;
     let doc = await this.getConfig();
-    //console.log("doc===",_options,"====",doc)
+    // console.log("doc===",options,"====",doc)
     let config = {
       provider: provider || options.provider || doc?.value?.provider || "OPENAI",
       authType: authType || options.authType || doc?.value?.azure?.authType || "KEY",
@@ -97,4 +97,8 @@ module.exports = function OpenAIService(options = {}) {
       throw "Error ( No OpenAI Provider )";
     }
   };
-};
+}
+
+OpenAIService.OpenAIService = OpenAIService;
+
+module.exports = OpenAIService;

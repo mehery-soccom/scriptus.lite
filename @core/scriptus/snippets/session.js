@@ -4,7 +4,7 @@ const ClientAppStore = require("../store/ClientAppStore");
 
 module.exports = function (
   $,
-  { server, tnt, app_id, appCode, domain, contact_id, channel_id, session, userData, session_id, execute, adapter }
+  { server, tnt, app_id, appCode, domain, contact_id, channel_id, session, userData, session_id, adapter, script }
 ) {
   function session() {
     async function saveSessionFeedback(params) {
@@ -63,8 +63,11 @@ module.exports = function (
     }
 
     async function getAppCustom(params) {
-      const doc = await ClientAppStore.get({ domain, id: app_id, code: appCode });
-      return doc?.custom || {};
+      if (!script.config.custom) {
+        const doc = await ClientAppStore.get({ domain, id: app_id, code: appCode });
+        script.config.custom = doc?.custom || {};
+      }
+      return script.config.custom;
     }
 
     return {

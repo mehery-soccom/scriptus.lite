@@ -6,6 +6,11 @@ const webChatSchema = mongon.Schema({
     required: true,
     index: true  // Create an index on contactId for faster querying
   },
+  sessionId : {
+    type : String,
+    required: true,
+    index: true
+  },
   rephrasedQuestion : {
     type : String, required : true
   },

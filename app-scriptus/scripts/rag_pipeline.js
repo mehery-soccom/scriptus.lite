@@ -11,10 +11,11 @@ async function onMessageReceive() {
   const inboundMessage = $.inbound;
   // console.log(`message : ${JSON.stringify(inboundMessage)}`)
   const contactId = inboundMessage.message.contactId;
+  const sessionId = inboundMessage.message.session.sessionId;
   const userquestion = inboundMessage.message.text.body;
   console.log(`user question : ${userquestion}`);
   console.log(`contact Id : ${contactId}`);
-  let message = { contactId, userquestion };
+  let message = { contactId, userquestion , sessionId };
   // console.log(`message in rag_pipeline script : ${JSON.stringify(message)}`)
   const rephrasedQuestion = await $.dorag().rephrase(message);
   const topMatches = await $.dorag().rag(rephrasedQuestion);
@@ -30,7 +31,7 @@ async function onMessageReceive() {
   }
   const context = { relevantInfo , rephrasedQuestion };
   const answer = await $.dorag().askllm(context);
-  const convo = { contactId, rephrasedQuestion, matches,
+  const convo = { sessionId ,contactId, rephrasedQuestion, matches,
     messages: {
       user: userquestion,
       assistant: answer
