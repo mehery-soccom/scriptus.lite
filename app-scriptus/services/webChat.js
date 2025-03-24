@@ -1,6 +1,7 @@
 const { sebChatSchema, webChatSchema } = require("../models/WebChatModel");
-const { openai } = require("../models/clients");
+// const { openai } = require("../models/clients");
 const mongon = require("@bootloader/mongon");
+const OpenAIService = require("../../@core/scriptus/clients/OpenAIService")
 async function saveConversation(convo) {
   const WebChat = mongon.model(webChatSchema);
   const newWebChat = new WebChat(convo);
@@ -12,11 +13,11 @@ async function saveConversation(convo) {
  * @param {string} contactId - The ID of the contact to retrieve chats for
  * @returns {Promise<Array>} Array of recent web chats with selected fields
  */
-async function getRecentWebChats(contactId) {
+async function getRecentWebChats(sessionId) {
   try {
     const WebChat = mongon.model(webChatSchema);
     const recentChats = await WebChat.find(
-      { contactId },
+      { sessionId },
       {
         // Explicitly select only the desired fields
         contactId: 1,
@@ -56,12 +57,12 @@ function formatChatHistory(chats) {
  * @param {string} currentQuestion - The current question from the user
  * @returns {Promise<string>} The rephrased question
  */
-async function rephraseWithContext(contactId, currentQuestion) {
+async function rephraseWithContext(sessionId, currentQuestion) {
   try {
     // Get recent chat history
-    console.log(`in rephraser : ${contactId}`);
+    console.log(`in rephraser : ${sessionId}`);
     console.log(`in rephraser : ${currentQuestion}`);
-    const recentChats = await getRecentWebChats(contactId);
+    const recentChats = await getRecentWebChats(sessionId);
     console.log(`recent chats : ${JSON.stringify(recentChats)}`);
     if (recentChats.length === 0) return currentQuestion;
     // Format chat history as string
@@ -121,6 +122,8 @@ Rephrase the user's question using the provided context.
 `;
     console.log(`rephrase user prompt : ${userPrompt}`);
     // Make API call to OpenAI
+    let service = new OpenAIService({ useGlobalConfig : true })
+    let { client:openai , config } = await service.init()
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini", // Or another model like gpt-3.5-turbo
       messages: [

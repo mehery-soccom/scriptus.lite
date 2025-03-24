@@ -13,7 +13,7 @@ module.exports = function ($, { session, execute , contactId}) {
       return this.chain(async function (parentResp) {
         console.log(`message in dorag snippet: ${JSON.stringify(message)}`)
         
-        const rephrasedQuestion = await rephraseWithContext(message.contactId , message.userquestion );
+        const rephrasedQuestion = await rephraseWithContext(message.sessionId , message.userquestion );
         console.log(`rephrased question : ${rephrasedQuestion}`);
         return rephrasedQuestion;
       });
