@@ -39,36 +39,28 @@ module.exports = function (
       // }
     }
 
-    async function getAppConfig(params) {
-      const result = await ClientAppStore.get({ domain, id: app_id, code: appCode });
-      if (result) {
-        let config = {};
-        let configSetup = {};
-        Object.keys(result.config).map((c) => {
-          if (c.startsWith("config#")) {
-            configSetup[c.replace("config#", "")] = result.config[c];
-          } else {
-            config[c] = result.config[c];
-          }
-        });
+    // async function getAppConfig(params) {
+    //   const result = await ClientAppStore.get({ domain, id: app_id, code: appCode });
+    //   if (result) {
+    //     let config = {};
+    //     let configSetup = {};
+    //     Object.keys(result.config).map((c) => {
+    //       if (c.startsWith("config#")) {
+    //         configSetup[c.replace("config#", "")] = result.config[c];
+    //       } else {
+    //         config[c] = result.config[c];
+    //       }
+    //     });
 
-        result.config = {
-          ...config,
-          ...configSetup,
-        };
+    //     result.config = {
+    //       ...config,
+    //       ...configSetup,
+    //     };
 
-        return result;
-      }
-      return {};
-    }
-
-    async function getAppCustom(params) {
-      if (!script.config.custom) {
-        const doc = await ClientAppStore.get({ domain, id: app_id, code: appCode });
-        script.config.custom = doc?.custom || {};
-      }
-      return script.config.custom;
-    }
+    //     return result;
+    //   }
+    //   return {};
+    // }
 
     return {
       __info__: {
@@ -96,19 +88,8 @@ module.exports = function (
         return saveSessionFeedback(params);
         // return this;
       },
-      app({ entity, params }) {
-        switch (entity) {
-          case "config":
-            // this.promise = getAppConfig(params);
-            return getAppConfig(params);
-          // break;
-          case "custom":
-            return getAppCustom(params);
-          // break;
-          default:
-            return Promise.resolve({});
-        }
-        // return this;
+      app() {
+        return $.app();
       },
       then(callback) {
         this.promise = this.promise.then(callback);
@@ -172,11 +153,17 @@ module.exports = function (
   };
   session.app = {
     config: function (options) {
-      return session().app({ entity: "config", params: options });
+      return $.app.options.config();
     },
-  };
-  session.app.options = function (options) {
-    return session().app({ entity: "custom", params: options });
+    options: function (options) {
+      return $.app.options.custom(); //For backward compatibility
+    },
+    props: function (options) {
+      return $.app.options.props();
+    },
+    custom: function (options) {
+      return $.app.options.custom();
+    },
   };
   return session;
 };

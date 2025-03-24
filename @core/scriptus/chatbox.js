@@ -22,7 +22,7 @@ function ChatBox({ adapter }) {
       id: appId,
       async load() {
         let { code, config, botFlow: story } = await BotCodeStore.getBotCode({ appId: appId });
-        return { code, config, story };
+        return { code, config, options: null, story };
       },
     });
 

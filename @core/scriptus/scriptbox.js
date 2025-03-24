@@ -92,7 +92,7 @@ const readFiles = function ({ scriptsDir }) {
       if (name[1] == "js") {
         STORE[name[0]].code = content;
       } else if (name[1] == "json") {
-        STORE[name[0]].config = JSON.parse(content);
+        STORE[name[0]].options = JSON.parse(content);
       }
       console.log("Loaded script", filename);
     }
