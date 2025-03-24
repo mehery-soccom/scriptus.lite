@@ -39,7 +39,7 @@ function OpenAIService(options = {}) {
   this.init = async function (initOptions = {}) {
     let { provider, authType, deployment, apiVersion, model } = initOptions;
     let doc = await this.getConfig();
-    //console.log("doc===",_options,"====",doc)
+    // console.log("doc===",options,"====",doc)
     let config = {
       provider: provider || options.provider || doc?.value?.provider || "OPENAI",
       authType: authType || options.authType || doc?.value?.azure?.authType || "KEY",

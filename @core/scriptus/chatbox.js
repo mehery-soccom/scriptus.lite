@@ -26,6 +26,7 @@ function ChatBox({ adapter }) {
       },
     });
 
+    //console.log("===",sb.getScript())
     //Create Snippets Context
     const $ = new Snippets({
       //Meta
