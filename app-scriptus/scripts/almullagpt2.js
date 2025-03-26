@@ -81,15 +81,30 @@ async function onMessageReceive() {
 
 async function onHandleDefault() {
   //console.log("onHandleDefault");
-  let { history } = await $.store.local("history");
+  const isOpenAi = true;
+  const inboundMessage = $.inbound;
+  // console.log(`message : ${JSON.stringify(inboundMessage)}`)
+  const contactId = inboundMessage.message.contactId;
+  const sessionId = inboundMessage.message.session.sessionId;
+  const userquestion = inboundMessage.message.text.body;
+  let rawHistory = await $.dorag().getHistory(sessionId);
+  let history = await $.dorag().getHistoryForIntent(rawHistory);
+  
+
+  // let { history } = await $.store.local("history");
   history = history || [];
-  console.log(`history : ${history}`);
   history.push({
     role: "user",
     content: $.inbound.getText(),
   });
+  console.log(`history : ${JSON.stringify(history)}`);
+  console.log("I am before intent creation");
   let prompt = await create_intent(history);
-  let resp = await $.openai.next(prompt, functions);
+  console.log("I am after intent creation");
+  let resp = await $.openai({ useGlobalConfig: true }).next(prompt, functions);
+  console.log("I am after open ai call creation");
+  
+
   //console.log("resp", resp);
   console.log("resp.message()", resp.message());
   //console.log("resp.isError()", resp.isError());
@@ -113,7 +128,7 @@ async function onHandleDefault() {
               response: cleanedContent || content,
             },
           };
-        } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
+        } else if (["faq_query", "exchange_rates","connect_agent"].indexOf(content) > -1) {
           return {
             name: content,
             args: {},
@@ -135,34 +150,76 @@ async function onHandleDefault() {
         } else {
           text = await showExchangeRate(args.currency);
         }
+        const convo = { sessionId ,contactId, rephrasedQuestion : userquestion, 
+          messages: {
+            user: userquestion,
+            assistant: answer.ans
+          }
+        };
+
+        const savedChat = await $.dorag().saveConvo(convo);
         await respond(text, history, true);
       })
       .on("*", async function ({ content }) {
+        console.log(`CONTENT : ${JSON.stringify(content)}`);
         console.log("INTENT:faq_query");
-        const options = await $.session.app.options();
-        console.log("code : options.knowbase", options.knowbase);
-        let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
-        let knowledgeBaseStr = knowledgeBase
-          .map(function (nb) {
-            return `
-            ${nb.title}
-            ${nb.content}
-          `;
-          })
-          .join("");
-        //knowledgeBaseStr = "";
-        // console.log("response.config", response.config)
-        let prompt = await create_prompt(
-          [
-            `${options.knowbase_prompt}
-          ${knowledgeBaseStr}
-          `,
-          ],
-          history
-        );
-        let resp2 = await $.openai.next(prompt);
-        //console.log("resp2.message()", resp2.message());
-        await respond(resp2.message().content, history);
+        console.log(`contactId: ${contactId}`);
+        console.log(`sessionId: ${sessionId}`);
+        console.log(`userquestion: ${userquestion}`);
+        let message = { userquestion , rawHistory };
+        const rephrasedQuestion = await $.dorag().rephrase(message);
+        const topMatches = await $.dorag().rag(rephrasedQuestion);
+
+        let relevantInfo = "";
+        const matches = [];
+        for (let i = 0; i < topMatches.length; i++) {
+          const newInfo = isOpenAi
+            ? `${i + 1}. Question : ${topMatches[i].question} \n Answer : ${topMatches[i].answer} \n`
+            : `${i + 1}. ${topMatches[i].knowledgebase} \n`;
+          matches.push({ knowledgebase: newInfo, score: topMatches[i].score });
+          relevantInfo += newInfo;
+        }
+        const context = { relevantInfo , rephrasedQuestion };
+        const answer = await $.dorag().askllm(context);
+        const convo = { sessionId ,contactId, rephrasedQuestion, matches,
+          messages: {
+            user: userquestion,
+            assistant: answer.ans
+          }
+        };
+
+        const savedChat = await $.dorag().saveConvo(convo);
+        if(answer.valid){
+          await respond(answer.ans,history);
+        } else {
+          await assignToAgent(history , answer.ans);
+        }
+        
+        // let resp = await $.reply(`${answer}`);
+        // const options = await $.session.app.options();
+        // console.log("code : options.knowbase", options.knowbase);
+        // let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
+        // let knowledgeBaseStr = knowledgeBase
+        //   .map(function (nb) {
+        //     return `
+        //     ${nb.title}
+        //     ${nb.content}
+        //   `;
+        //   })
+        //   .join("");
+        // //knowledgeBaseStr = "";
+        // // console.log("response.config", response.config)
+        // let prompt = await create_prompt(
+        //   [
+        //     `${options.knowbase_prompt}
+        //   ${knowledgeBaseStr}
+        //   `,
+        //   ],
+        //   history
+        // );
+        // let resp2 = await $.openai.next(prompt);
+        // //console.log("resp2.message()", resp2.message());
+        // await respond(resp2.message().content, history);
       })
       // .on(async function ({ content  }) {
       //   console.log("INTENT:DEFAULT");

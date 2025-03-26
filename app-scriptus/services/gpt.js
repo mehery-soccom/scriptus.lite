@@ -52,13 +52,23 @@ async function information_not_available() {
 
 async function getModelResponse(relevantInfo, rephrasedQuestion) {
   let start = Date.now();
-  const systemPrompt = `
-You are an AI assistant for Al Mulla Exchange.
-Answer the user's question using only the provided information.
-If the information indirectly answers the question, still answer.
-If the information is insufficient, trigger information_not_available().
-Never invent information.
-`;
+//   const systemPrompt = `
+// You are an AI assistant for Al Mulla Exchange.
+// Answer the user's question using only the provided information.
+// If the information indirectly answers the question, still answer.
+// If the information is insufficient, trigger information_not_available().
+// Never invent information.
+// `;
+  const systemPrompt = `You are an AI assistant for Al Mulla Exchange.  
+Use the provided information to answer the user's question.  
+
+- If the retrieved information contains an answer that matches the meaning of the user’s question, respond using that information.  
+- If the wording differs but the meaning is the same, still answer using the retrieved data.  
+- If no relevant information is found, trigger information_not_available() function provided as a tool.  
+- Do not require an exact wording match to provide an answer.  
+
+Never invent information. Prioritize using retrieved knowledge.  
+`
   const userPrompt = `
 ### Relevant Information
 ${relevantInfo}
@@ -66,11 +76,11 @@ ${relevantInfo}
 ### User Question
 ${rephrasedQuestion}
 
-Answer the question using the information provided.
-If the information is insufficient, trigger information_not_available().
-Prefer answering if the meaning is clear, even if wording differs.
+Answer the user’s question using **the most relevant retrieved information from the Relevant Information above**.  
+- If a retrieved FAQ answers the question (even if wording differs), provide that answer.  
+- If no relevant information is found, trigger 'information_not_available()' function provided as tool.  
 `;
-  console.log(`SYStem prompt : ${systemPrompt}`);
+  // console.log(`SYStem prompt : ${systemPrompt}`);
   console.log(`user prompt  : ${userPrompt}`);
   let service = new OpenAIService({ useGlobalConfig : true })
   let { client:openai , config } = await service.init()
@@ -103,14 +113,22 @@ Prefer answering if the meaning is clear, even if wording differs.
 
   if (completion.choices[0].message.content === null) {
     const ans = await information_not_available();
+    const answer = {
+      ans : ans,
+      valid : false
+    }
     console.log(completion.usage);
     await getExeTime("GPT", start);
-    return ans;
+    return answer;
   }
 
   console.log(completion.usage);
   await getExeTime("GPT", start);
-  return completion.choices[0].message.content;
+  const answer = {
+    ans : completion.choices[0].message.content , 
+    valid : true 
+  }
+  return answer;
 }
 
 module.exports = { generateEmbeddingOpenAi, generateEmbeddingAllMini, getModelResponse };
