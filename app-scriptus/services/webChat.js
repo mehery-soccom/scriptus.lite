@@ -51,75 +51,42 @@ function formatChatHistory(chats) {
     })
     .join("\n");
 }
+
+function formatChatHistoryForIntent(chats){
+  const arr = [];
+  chats
+    .slice(2) // Skip the first 2 elements
+    .forEach((chat) => { // Use forEach instead of map to push into the array
+      arr.push({ role: "user", content: chat.rephrasedQuestion });
+      arr.push({ role: "assistant", content: chat.messages.assistant });
+    });
+  return arr;
+}
 /**
  * Rephrases the current user question using OpenAI based on chat history
  * @param {string} contactId - User's contact ID
  * @param {string} currentQuestion - The current question from the user
  * @returns {Promise<string>} The rephrased question
  */
-async function rephraseWithContext(sessionId, currentQuestion) {
+async function rephraseWithContext(currentQuestion, rawHistory, rephrase_system_prompt,  rephrase_user_prompt) {
   try {
     // Get recent chat history
-    console.log(`in rephraser : ${sessionId}`);
+    // console.log(`in rephraser : ${sessionId}`);
     console.log(`in rephraser : ${currentQuestion}`);
-    const recentChats = await getRecentWebChats(sessionId);
-    console.log(`recent chats : ${JSON.stringify(recentChats)}`);
-    if (recentChats.length === 0) return currentQuestion;
+    // const recentChats = await getRecentWebChats(sessionId);
+    // console.log(`recent chats : ${JSON.stringify(recentChats)}`);
+    if (rawHistory.length === 0) return currentQuestion;
     // Format chat history as string
-    const chatHistoryString = formatChatHistory(recentChats);
-
-    // Construct the system and user messages
-    const systemPrompt = `
-    Your task is to rephrase the user's current question in a context-aware manner using the provided chat history.
+    const chatHistoryString = formatChatHistory(rawHistory);
     
-    ### Rephrasing Rules:
-    - If the question is about sending money (charges, deductions, transfer, etc.), always infer the **latest country** from chat history — even if earlier contexts mention a different country.
-    - Ignore frequency of mentions; always prioritize the **most recent country** in context.
-    - If the user's question is about services, products, or remittance methods (like Visa card, bank deposit), do NOT inject any country unless explicitly mentioned.
-    - Avoid hallucinating or assuming context beyond chat history.
-    - Never provide an answer — only output the rephrased question.
-    
-    ### Conflict Resolution:
-    - If multiple countries appear in the chat history, always default to the **latest mentioned country**.
-    - If no country is mentioned, leave the question unchanged.
-    
-    ### Examples:
-    - Q: What are the charges for sending money?  
-      ✅ Rephrased: What are the charges for sending money to Bhutan?
-    
-    - Q: What is Visa card remittance service?  
-      ✅ Rephrased: What is Visa card remittance service? (Do not inject any country)
-    `;
+    const systemPrompt = rephrase_system_prompt
+    const userPrompt = `### Chat History  
+${chatHistoryString}  
 
-    //     const userPrompt = `
-    // ### Chat History
-    // ${chatHistoryString}
-
-    // ### Current User Question
-    // ${currentQuestion}
-
-    // Rephrase the user question based on the context provided.
-    // - If the chat history contains a clear target country, add it to the question.
-    // - If the chat history contains multiple target countries add the latest one to the question.
-    // - If the chat history contains relevant transfer fees, charges, or deductions, maintain that context.
-    // - If the context is unclear, leave the question unchanged.
-    // - Focus on making the question clear and concise without adding assumptions.
-    // `;
-    const userPrompt = `
-### Chat History
-${chatHistoryString}
-
-### Current User Question
-${currentQuestion}
-
-Rephrase the user's question using the provided context.
-
-- If the question is about sending money (charges, deductions, transfer, etc.), use the most recent country in context — even if older countries exist.
-- If the question is about services, products, or remittance methods (like Visa card, bank deposit), do NOT inject any country unless explicitly mentioned.
-- Always prioritize the user's intent and keep the question clear and concise.
-- Avoid fabricating information or assuming context where none exists.
-- In case of conflicting countries, default to the latest mentioned country.
-`;
+### Current User Question  
+${currentQuestion}  
+${rephrase_user_prompt} 
+`
     console.log(`rephrase user prompt : ${userPrompt}`);
     // Make API call to OpenAI
     let service = new OpenAIService({ useGlobalConfig : true })
@@ -162,4 +129,4 @@ Rephrase the user's question using the provided context.
   }
 }
 
-module.exports = { getRecentWebChats, rephraseWithContext , saveConversation };
+module.exports = { getRecentWebChats, rephraseWithContext , saveConversation , formatChatHistoryForIntent , formatChatHistory };

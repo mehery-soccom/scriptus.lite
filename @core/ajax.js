@@ -22,10 +22,12 @@ async function request(url, method, headers, body) {
       headers,
       redirect: "follow",
       referrerPolicy: "no-referrer",
-      body: body ? JSON.stringify(body) : undefined,
+      body: body,
       signal: timer.signal,
     });
     if (!response.ok) {
+      let json = await response.json();
+      console.log("Response:",json)
       throw new Error(`Response status: ${response.status}`);
     }
     clearTimeout(timer.timeout);

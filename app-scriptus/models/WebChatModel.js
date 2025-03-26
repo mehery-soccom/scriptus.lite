@@ -35,7 +35,8 @@ const webChatSchema = mongon.Schema({
     },
     score: {
       type: Number
-    }
+    },
+    required : false
   }]
 }, {
   // Add createdAt and updatedAt timestamps automatically

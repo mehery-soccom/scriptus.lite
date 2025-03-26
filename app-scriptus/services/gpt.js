@@ -50,27 +50,18 @@ async function information_not_available() {
   You can reach out to us on email: Help@almullaexchange.com .`;
 }
 
-async function getModelResponse(relevantInfo, rephrasedQuestion) {
+async function getModelResponse(relevantInfo, rephrasedQuestion, ask_llm_system_prompt, ask_llm_user_prompt) {
   let start = Date.now();
-  const systemPrompt = `
-You are an AI assistant for Al Mulla Exchange.
-Answer the user's question using only the provided information.
-If the information indirectly answers the question, still answer.
-If the information is insufficient, trigger information_not_available().
-Never invent information.
-`;
+  const systemPrompt = ask_llm_system_prompt;
   const userPrompt = `
 ### Relevant Information
 ${relevantInfo}
 
 ### User Question
 ${rephrasedQuestion}
-
-Answer the question using the information provided.
-If the information is insufficient, trigger information_not_available().
-Prefer answering if the meaning is clear, even if wording differs.
+${ask_llm_user_prompt}
 `;
-  console.log(`SYStem prompt : ${systemPrompt}`);
+  // console.log(`SYStem prompt : ${systemPrompt}`);
   console.log(`user prompt  : ${userPrompt}`);
   let service = new OpenAIService({ useGlobalConfig : true })
   let { client:openai , config } = await service.init()
@@ -103,14 +94,22 @@ Prefer answering if the meaning is clear, even if wording differs.
 
   if (completion.choices[0].message.content === null) {
     const ans = await information_not_available();
+    const answer = {
+      ans : ans,
+      valid : false
+    }
     console.log(completion.usage);
     await getExeTime("GPT", start);
-    return ans;
+    return answer;
   }
 
   console.log(completion.usage);
   await getExeTime("GPT", start);
-  return completion.choices[0].message.content;
+  const answer = {
+    ans : completion.choices[0].message.content , 
+    valid : true 
+  }
+  return answer;
 }
 
 module.exports = { generateEmbeddingOpenAi, generateEmbeddingAllMini, getModelResponse };

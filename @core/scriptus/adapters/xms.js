@@ -180,6 +180,7 @@ function XMSAdapeter({ message: messageBody }) {
   };
 
   this.routeSession = async function (options) {
+    //console.log(`routeSession(${options})`, options);
     return await ajax({
       url: base_url + "/api/v1/session/routing",
       headers,
@@ -189,7 +190,7 @@ function XMSAdapeter({ message: messageBody }) {
   };
 
   this.closeSession = async function (options) {
-    return $.rest({
+    return ajax({
       url: base_url + "/api/v1/session/close",
       headers,
     })
