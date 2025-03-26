@@ -50,35 +50,16 @@ async function information_not_available() {
   You can reach out to us on email: Help@almullaexchange.com .`;
 }
 
-async function getModelResponse(relevantInfo, rephrasedQuestion) {
+async function getModelResponse(relevantInfo, rephrasedQuestion, ask_llm_system_prompt, ask_llm_user_prompt) {
   let start = Date.now();
-//   const systemPrompt = `
-// You are an AI assistant for Al Mulla Exchange.
-// Answer the user's question using only the provided information.
-// If the information indirectly answers the question, still answer.
-// If the information is insufficient, trigger information_not_available().
-// Never invent information.
-// `;
-  const systemPrompt = `You are an AI assistant for Al Mulla Exchange.  
-Use the provided information to answer the user's question.  
-
-- If the retrieved information contains an answer that matches the meaning of the user’s question, respond using that information.  
-- If the wording differs but the meaning is the same, still answer using the retrieved data.  
-- If no relevant information is found, trigger information_not_available() function provided as a tool.  
-- Do not require an exact wording match to provide an answer.  
-
-Never invent information. Prioritize using retrieved knowledge.  
-`
+  const systemPrompt = ask_llm_system_prompt;
   const userPrompt = `
 ### Relevant Information
 ${relevantInfo}
 
 ### User Question
 ${rephrasedQuestion}
-
-Answer the user’s question using **the most relevant retrieved information from the Relevant Information above**.  
-- If a retrieved FAQ answers the question (even if wording differs), provide that answer.  
-- If no relevant information is found, trigger 'information_not_available()' function provided as tool.  
+${ask_llm_user_prompt}
 `;
   // console.log(`SYStem prompt : ${systemPrompt}`);
   console.log(`user prompt  : ${userPrompt}`);
