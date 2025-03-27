@@ -47,7 +47,8 @@ async function information_not_available() {
   return `Information you are asking for is not available currently.
   For more information: You can WhatsApp or Call us: +965 1840 123. 
   For more information, please contact us on 1840123 . 
-  You can reach out to us on email: Help@almullaexchange.com .`;
+  You can reach out to us on email: Help@almullaexchange.com.
+  For better understanding of your query we will transfer to agent.`;
 }
 
 async function getModelResponse(relevantInfo, rephrasedQuestion, ask_llm_system_prompt, ask_llm_user_prompt) {
