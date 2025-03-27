@@ -11,6 +11,9 @@ async function loadDb() {
     await vectorDb.loadCollection({
       collection_name: "fast_semantic_search",
     });
+    await vectorDb.loadCollection({
+      collection_name: "qa_production"
+    });
   }
 }
 /**
@@ -20,6 +23,10 @@ async function loadDb() {
  * @param {number} topK - Number of results to return
  * @returns {Promise<Array>} - Array of search results
  */
+
+async function insertQaPairs(collection_name, data){
+  return await vectorDb.insert({collection_name, data});
+}
 async function semanticSearch(collectionName, embedding, output_fields, field_name, topK = 2, filter = "") {
   try {
     let start = Date.now();
@@ -116,4 +123,4 @@ async function performRagAllMini(userQuestion, collectionName, contactId) {
     throw error;
   }
 }
-module.exports = { performRagopenAi, performRagAllMini, semanticSearch, loadDb };
+module.exports = { performRagopenAi, performRagAllMini, semanticSearch, loadDb , insertQaPairs };
