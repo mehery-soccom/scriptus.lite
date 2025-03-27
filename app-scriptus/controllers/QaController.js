@@ -6,6 +6,7 @@ import config from "@bootloader/config";
 import { z } from "zod";
 import { generateEmbeddingOpenAi } from "../services/gpt";
 import { insertQaPairs } from "../services/rag";
+import { collection_name } from "../models/clients";
 const questionSchema = z.object({
   que: z.string().min(1, { message: "Question text cannot be empty." }).optional(),
   ans: z.string().min(1, { message: "Answer text cannot be empty." }).optional(),
@@ -94,14 +95,13 @@ export default class QaController {
       }
     }
     
-    const tenant_domain = "kedar"; // context.getTenant();
+    const tenant_domain =  context.getTenant(); //"kedar";
     const server = config.getIfPresent("mry.scriptus.server");
     const tenant_partition_key = `${tenant_domain}.${server}`;
     // console.log(`<<<<<TENANT: ${JSON.stringify(tenant_partition_key)}`, );
     const ques = body.ques;
     const kb_id = body.kb_id;
     const article_id = body.article_id;
-    const collection_name_prod = config.getIfPresent("mry.scriptus.zilliz.prod");
     let data = [];
     for (const item of ques) {
       const questionEmbedding = await generateEmbeddingOpenAi(item.que); 
@@ -115,9 +115,9 @@ export default class QaController {
       data.push(element);
     }
     // console.log(`data : ${JSON.stringify(data)}`)
-    const res = await insertQaPairs(collection_name_prod,data);
-    console.log(JSON.stringify(res));
-    return { tenant_partition_key, ques, kb_id, article_id , collection_name_prod , result : res };
+    const res = await insertQaPairs(collection_name,data);
+    // console.log(JSON.stringify(res));
+    return { tenant_partition_key, ques, kb_id, article_id , collection_name , result : res };
   }
 
   @RequestMapping({ path: "/api/messages", method: "post" })

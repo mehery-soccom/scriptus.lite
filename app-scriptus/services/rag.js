@@ -8,12 +8,12 @@ async function loadDb() {
     await vectorDb.loadCollection({
       collection_name: "qaSchema",
     });
-    await vectorDb.loadCollection({
-      collection_name: "fast_semantic_search",
-    });
-    await vectorDb.loadCollection({
-      collection_name: "qa_production"
-    });
+    // await vectorDb.loadCollection({
+    //   collection_name: "fast_semantic_search",
+    // });
+    // await vectorDb.loadCollection({
+    //   collection_name: "qa_production"
+    // });
   }
 }
 /**
