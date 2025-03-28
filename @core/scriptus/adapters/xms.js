@@ -1,16 +1,25 @@
 const fetch = require("node-fetch");
 const config = require("@bootloader/config");
 const ajax = require("../../ajax");
+const { string } = require("../../utils");
+const { cachebox } = require("@bootloader/redison");
 
 var secretKey = config.getIfPresent("mry.scriptus.secret");
 var scriptusServer = config.getIfPresent("mry.scriptus.server");
 
 var messageTypes = ["template", "audio", "document", "image", "location", "text", "video", "voice", "contacts"];
 
+const debuggerbox = cachebox({
+  name: "debugger",
+  ttl: 60 * 5,
+});
+
 function XMSAdapeter({ message: messageBody }) {
   let domain = messageBody.meta.domain;
   let server = messageBody.meta.server || scriptusServer;
   let appId = messageBody.meta.appId;
+  let contactId = messageBody.contacts[0]?.contactId;
+  let toDebug = messageBody?.meta?.debug || false;
 
   var base_url = "https://" + domain + "." + server + "/xms";
   var headers = {
@@ -18,11 +27,15 @@ function XMSAdapeter({ message: messageBody }) {
     "x-api-id": appId,
   };
 
-  this.toContext = function () {
+  this.toContext = async function () {
+    let contactKey = string.toContactKey(contactId);
+    if (contactKey) {
+      toDebug = !!(await debuggerbox.get(contactKey));
+    }
     var context = {
       meta: messageBody.meta,
       //Meta
-      isDebug: messageBody.meta.debug,
+      isDebug: toDebug,
       server: server,
       tnt: domain,
       domain: domain,
@@ -30,7 +43,7 @@ function XMSAdapeter({ message: messageBody }) {
       appCode: messageBody.meta.appCode,
       appType: messageBody.meta.appType,
       //Contact
-      contact_id: messageBody.contacts[0].contactId,
+      contact_id: contactId,
       channel_id: messageBody?.contacts[0]?.channelId,
 
       //Ibound

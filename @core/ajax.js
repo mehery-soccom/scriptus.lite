@@ -12,6 +12,7 @@ function createTimeout(time) {
 }
 
 async function request(url, method, headers, body) {
+  //console.log("Request:", url, method, headers, body);
   try {
     const timer = createTimeout();
     const response = await fetch(url, {
@@ -27,7 +28,7 @@ async function request(url, method, headers, body) {
     });
     if (!response.ok) {
       let json = await response.json();
-      console.log("Response:",json)
+      console.log("Response:", json);
       throw new Error(`Response status: ${response.status}`);
     }
     clearTimeout(timer.timeout);
@@ -105,7 +106,8 @@ module.exports = function (options) {
       for (let key in query) {
         data.append(key, query[key]);
       }
-      let endUrl = options.url + "?" + data.toString();
+      let url = options.url.split("?");
+      let endUrl = url[0] + "?" + (url[1] || "") + "&" + data.toString();
       return new RespPromise(request(endUrl, "GET", options.headers));
     },
     delete(query) {
@@ -113,7 +115,8 @@ module.exports = function (options) {
       for (let key in query) {
         data.append(key, query[key]);
       }
-      let endUrl = options.url + "?" + data.toString();
+      let url = options.url.split("?");
+      let endUrl = url[0] + "?" + (url[1] || "") + "&" + data.toString();
       return new RespPromise(request(endUrl, "DELETE", options.headers));
     },
   };

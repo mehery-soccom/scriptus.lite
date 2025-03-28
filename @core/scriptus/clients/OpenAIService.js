@@ -12,6 +12,7 @@ const azureIdentity = requireOptional("@azure/identity"); //{ ClientSecretCreden
 const defaulOpenAiConfig = {
   secret: { apiKey: config.getIfPresent("openai.token") },
   value: { provider: "OPENAI" },
+  asDefault: config.getIfPresent("openai.as.default") || false,
 };
 
 function OpenAIService(options = {}) {
@@ -30,7 +31,7 @@ function OpenAIService(options = {}) {
       });
     }
     let config = await $config;
-    if (!config && useGlobalConfig) {
+    if (!config && (useGlobalConfig || defaulOpenAiConfig.asDefault)) {
       return defaulOpenAiConfig;
     }
     return config;
