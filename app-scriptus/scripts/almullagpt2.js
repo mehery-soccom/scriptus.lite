@@ -172,13 +172,16 @@ async function onHandleDefault() {
 
         let relevantInfo = "";
         const matches = [];
+        console.log(`topmatches : ${JSON.stringify(topMatches)}`);
         for (let i = 0; i < topMatches.length; i++) {
-          const newInfo = isOpenAi
-            ? `${i + 1}. Question : ${topMatches[i].question} \n Answer : ${topMatches[i].answer} \n`
-            : `${i + 1}. ${topMatches[i].knowledgebase} \n`;
+          // const newInfo = isOpenAi
+          //   ? `${i + 1}. Question : ${topMatches[i].question} \n Answer : ${topMatches[i].answer} \n`
+          //   : `${i + 1}. ${topMatches[i].knowledgebase} \n`;
+          const newInfo = `${i + 1}. ${topMatches[i].knowledgebase} \n`
           matches.push({ knowledgebase: newInfo, score: topMatches[i].score });
           relevantInfo += newInfo;
         }
+        console.log(`relevant info : ${relevantInfo}`);
         const context = { relevantInfo , rephrasedQuestion };
         const answer = await $.dorag().askllm(context);
         const convo = { sessionId ,contactId, rephrasedQuestion, matches,

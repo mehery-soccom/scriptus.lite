@@ -7,9 +7,70 @@ import {
   formatChatHistory,
   formatChatHistoryForIntent,
 } from "../services/webChat";
-import { performRagopenAi } from "../services/rag";
+// import { performRagopenAi } from "../services/rag";
 import { getModelResponse } from "../services/gpt";
 import { webChatSchema } from "../models/WebChatModel";
+import { collection_name } from "../models/clients";
+import { generateEmbeddingOpenAi } from "../services/gpt";
+import { vectorDb } from "../models/clients"
+import { MetricType } from "@zilliz/milvus2-sdk-node";
+import { getExeTime } from "../../@core/utils/exetime";
+async function semanticSearch(embedding, output_fields, field_name, topK = 2, filter = "") {
+  try {
+    let start = Date.now();
+
+    // Perform vector similarity search
+    const searchResult = await vectorDb.search({
+      collection_name : collection_name,
+      vector: embedding,
+      filter: filter,
+      field_name,
+      limit: topK,
+      output_fields,
+      metric_type: MetricType.COSINE,
+    });
+    console.log(`SEARCH RESULTS : `, JSON.stringify(searchResult));
+    await getExeTime("VectorSearch", start);
+    return searchResult.results;
+  } catch (error) {
+    console.error("Error performing semantic search:", error);
+    throw error;
+  }
+}
+
+async function performRag(rephrasedQuestion) {
+  try {
+    // 1. Generate embedding for the user question
+    let start = Date.now();
+    const questionEmbedding = await generateEmbeddingOpenAi(rephrasedQuestion);
+
+    // 2. Perform semantic search to find similar questions
+    console.log("Performing semantic search...");
+    const park = "almullaexchange";
+    const searchResults = await semanticSearch(
+      questionEmbedding,
+      ["knowledgebase"],
+      "fast_dense_vector",
+      2,
+      `tenant_partition_key == "${park}"`
+    );
+
+    // 3. Format results for passing to the fine-tuned model
+    const topMatches = searchResults.map((result) => ({
+      knowledgebase: result.knowledgebase,
+      score: result.score,
+    }));
+
+    console.log(`Found ${topMatches.length} relevant matches`);
+    await getExeTime("RagAllMini", start);
+    return topMatches;
+
+    // The caller can then pass these top matches to their fine-tuned model
+  } catch (error) {
+    console.error("Error in RAG pipeline:", error);
+    throw error;
+  }
+}
 
 // ONCE PER PROEJCT START
 // SCOPE : PROJECT
@@ -50,7 +111,7 @@ module.exports = function ($, { session, execute, contactId }) {
     }
     rag(rephrasedQuestion) {
       return this.chain(async function (parentResp) {
-        const topMatches = await performRagopenAi(rephrasedQuestion);
+        const topMatches = await performRag(rephrasedQuestion);
         return topMatches;
       });
     }
