@@ -12,9 +12,10 @@ import { getModelResponse } from "../services/gpt";
 import { webChatSchema } from "../models/WebChatModel";
 
 // ONCE PER PROEJCT START
-
+// SCOPE : PROJECT
 module.exports = function ($, { session, execute, contactId }) {
   // ONCE PER PROEJCT MESSAE INBOUND
+  // SCOPE : MESSAGE
   let SOME_VARIABLE = 0; // THIS VARIABLE CAN BE CHANGED AND MAINTAINED for ONE INBOUND MESSAGES
   class DoRagPromise extends ChainedPromise {
     constructor(executor = (resolve) => resolve(0)) {
@@ -73,6 +74,7 @@ module.exports = function ($, { session, execute, contactId }) {
   }
   return function () {
     //EVERY TIME FUNCTION IS CALLED
+    // SCOPE : FUNCTION
     return new DoRagPromise();
   };
 };
