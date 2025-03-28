@@ -1,10 +1,21 @@
 import ajax from "../../@core/ajax";
 import ChainedPromise from "../../@core/lib/ChainedPromise";
-import { rephraseWithContext, saveConversation, getRecentWebChats , formatChatHistory , formatChatHistoryForIntent } from "../services/webChat";
+import {
+  rephraseWithContext,
+  saveConversation,
+  getRecentWebChats,
+  formatChatHistory,
+  formatChatHistoryForIntent,
+} from "../services/webChat";
 import { performRagopenAi } from "../services/rag";
 import { getModelResponse } from "../services/gpt";
 import { webChatSchema } from "../models/WebChatModel";
+
+// ONCE PER PROEJCT START
+
 module.exports = function ($, { session, execute, contactId }) {
+  // ONCE PER PROEJCT MESSAE INBOUND
+  let SOME_VARIABLE = 0; // THIS VARIABLE CAN BE CHANGED AND MAINTAINED for ONE INBOUND MESSAGES
   class DoRagPromise extends ChainedPromise {
     constructor(executor = (resolve) => resolve(0)) {
       super(executor);
@@ -12,21 +23,26 @@ module.exports = function ($, { session, execute, contactId }) {
     getHistory(sessionId) {
       return this.chain(async function (parentResp) {
         const rawHistory = await getRecentWebChats(sessionId);
-        return rawHistory
+        return rawHistory;
       });
     }
-    getHistoryForIntent(rawHistory){
+    getHistoryForIntent(rawHistory) {
       return this.chain(async function (parentResp) {
         const histForIntent = formatChatHistoryForIntent(rawHistory);
-        return histForIntent
+        return histForIntent;
       });
     }
 
     rephrase(message) {
       return this.chain(async function (parentResp) {
         console.log(`message in dorag snippet: ${JSON.stringify(message)}`);
-        const { rephrase_system_prompt , rephrase_user_prompt } = await $.app.options.custom();
-        const rephrasedQuestion = await rephraseWithContext(message.userquestion , message.rawHistory , rephrase_system_prompt , rephrase_user_prompt );
+        const { rephrase_system_prompt, rephrase_user_prompt } = await $.app.options.custom();
+        const rephrasedQuestion = await rephraseWithContext(
+          message.userquestion,
+          message.rawHistory,
+          rephrase_system_prompt,
+          rephrase_user_prompt
+        );
         console.log(`rephrased question : ${rephrasedQuestion}`);
         return rephrasedQuestion;
       });
@@ -39,8 +55,13 @@ module.exports = function ($, { session, execute, contactId }) {
     }
     askllm(context) {
       return this.chain(async function (parentResp) {
-        const { ask_llm_system_prompt , ask_llm_user_prompt } = await $.app.options.custom();
-        const answer = await getModelResponse(context.relevantInfo, context.rephrasedQuestion , ask_llm_system_prompt , ask_llm_user_prompt );
+        const { ask_llm_system_prompt, ask_llm_user_prompt } = await $.app.options.custom();
+        const answer = await getModelResponse(
+          context.relevantInfo,
+          context.rephrasedQuestion,
+          ask_llm_system_prompt,
+          ask_llm_user_prompt
+        );
         return answer;
       });
     }
@@ -51,6 +72,7 @@ module.exports = function ($, { session, execute, contactId }) {
     }
   }
   return function () {
+    //EVERY TIME FUNCTION IS CALLED
     return new DoRagPromise();
   };
 };
