@@ -36,7 +36,7 @@ async function information_not_available() {
   For better understanding of your query we will transfer to agent.`;
 }
 
-async function getModelResponse(relevantInfo, rephrasedQuestion,bot_introduction) {
+async function getModelResponse(relevantInfo, rephrasedQuestion,bot_introduction,model) {
   let start = Date.now();
   const systemPrompt = `${bot_introduction}
 - If the retrieved information contains an answer that matches the meaning of the user's question, respond using that information.  
@@ -60,7 +60,7 @@ Answer the user's question using **the most relevant retrieved information from 
   let service = new OpenAIService({ useGlobalConfig : true })
   let { client:openai , config } = await service.init()
   const completion = await openai.chat.completions.create({
-    model: "ft:gpt-4o-mini-2024-07-18:personal:remittance-bot-v2:B4QmFVQU",
+    model ,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -388,11 +388,12 @@ module.exports = function ($, { session, execute, contactId }) {
     }
     askllm(context) {
       return this.chain(async function (parentResp) {
-        const { bot_introduction } = await $.app.options.custom();
+        const { bot_introduction , answer_llm } = await $.app.options.custom();
         const answer = await getModelResponse(
           context.relevantInfo,
           context.rephrasedQuestion,
-          bot_introduction
+          bot_introduction,
+          answer_llm
         );
         return answer;
       });
