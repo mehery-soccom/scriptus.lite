@@ -87,9 +87,9 @@ async function onHandleDefault() {
   const contactId = inboundMessage.message.contactId;
   const sessionId = inboundMessage.message.session.sessionId;
   const userquestion = inboundMessage.message.text.body;
-  let rawHistory = await $.dorag().getHistory(sessionId);
-  let history = await $.dorag().getHistoryForIntent(rawHistory);
-  
+  // let rawHistory = await $.dorag().getHistory(sessionId);
+  // let history = await $.dorag().getHistoryForIntent(rawHistory);
+  let { history , rawHistory  } = await $.dorag().getHistoryWithIntent(sessionId);
 
   // let { history } = await $.store.local("history");
   history = history || [];
@@ -167,16 +167,14 @@ async function onHandleDefault() {
         console.log(`sessionId: ${sessionId}`);
         console.log(`userquestion: ${userquestion}`);
         let message = { userquestion , rawHistory };
-        const rephrasedQuestion = await $.dorag().rephrase(message);
-        const topMatches = await $.dorag().rag(rephrasedQuestion);
+        // const rephrasedQuestion = await $.dorag().rephrase(message);
+        // const topMatches = await $.dorag().rag(rephrasedQuestion);
+        const { rephrasedQuestion , topMatches } = await $.dorag().rephraseWithRag(message);
 
         let relevantInfo = "";
         const matches = [];
         console.log(`topmatches : ${JSON.stringify(topMatches)}`);
         for (let i = 0; i < topMatches.length; i++) {
-          // const newInfo = isOpenAi
-          //   ? `${i + 1}. Question : ${topMatches[i].question} \n Answer : ${topMatches[i].answer} \n`
-          //   : `${i + 1}. ${topMatches[i].knowledgebase} \n`;
           const newInfo = `${i + 1}. ${topMatches[i].knowledgebase} \n`
           matches.push({ knowledgebase: newInfo, score: topMatches[i].score });
           relevantInfo += newInfo;

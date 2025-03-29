@@ -6,6 +6,7 @@ import { vectorDb } from "../models/clients"
 import { MetricType } from "@zilliz/milvus2-sdk-node";
 import { getExeTime } from "../../@core/utils/exetime";
 import mongon from "@bootloader/mongon";
+import { context } from "@bootloader/utils";
 const OpenAIService = require("../../@core/scriptus/clients/OpenAIService")
 
 async function generateEmbeddingOpenAi(text, dims = 512) {
@@ -35,17 +36,25 @@ async function information_not_available() {
   For better understanding of your query we will transfer to agent.`;
 }
 
-async function getModelResponse(relevantInfo, rephrasedQuestion, ask_llm_system_prompt, ask_llm_user_prompt) {
+async function getModelResponse(relevantInfo, rephrasedQuestion,bot_introduction) {
   let start = Date.now();
-  const systemPrompt = ask_llm_system_prompt;
+  const systemPrompt = `${bot_introduction}
+- If the retrieved information contains an answer that matches the meaning of the user's question, respond using that information.  
+- If the wording differs but the meaning is the same, still answer using the retrieved data.  
+- If no relevant information is found, trigger information_not_available() function provided as a tool.  
+- Do not require an exact wording match to provide an answer.  
+- Do not omit any information while answering.
+Never invent information. Prioritize using retrieved knowledge.`;
   const userPrompt = `
 ### Relevant Information
 ${relevantInfo}
 
 ### User Question
 ${rephrasedQuestion}
-${ask_llm_user_prompt}
-`;
+
+Answer the user's question using **the most relevant retrieved information from the Relevant Information above**.  
+- If a retrieved FAQ answers the question (even if wording differs), provide that answer.  
+- If no relevant information is found, trigger 'information_not_available()' function provided as tool.`;
   // console.log(`SYStem prompt : ${systemPrompt}`);
   console.log(`user prompt  : ${userPrompt}`);
   let service = new OpenAIService({ useGlobalConfig : true })
@@ -149,12 +158,21 @@ function formatChatHistory(chats) {
 
 function formatChatHistoryForIntent(chats){
   const arr = [];
-  chats
+  if(chats.length >= 3){
+    chats
     .slice(2) // Skip the first 2 elements
     .forEach((chat) => { // Use forEach instead of map to push into the array
       arr.push({ role: "user", content: chat.rephrasedQuestion });
       arr.push({ role: "assistant", content: chat.messages.assistant });
     });
+  } else {
+    chats
+    .forEach((chat) => { // Use forEach instead of map to push into the array
+      arr.push({ role: "user", content: chat.rephrasedQuestion });
+      arr.push({ role: "assistant", content: chat.messages.assistant });
+    });
+  }
+  
   return arr;
 }
 /**
@@ -163,7 +181,7 @@ function formatChatHistoryForIntent(chats){
  * @param {string} currentQuestion - The current question from the user
  * @returns {Promise<string>} The rephrased question
  */
-async function rephraseWithContext(currentQuestion, rawHistory, rephrase_system_prompt,  rephrase_user_prompt) {
+async function rephraseWithContext(currentQuestion, rawHistory, rephrasing_rules, rephrasing_conflict_resolution_rules, rephrasing_examples ) {
   try {
     // Get recent chat history
     // console.log(`in rephraser : ${sessionId}`);
@@ -174,14 +192,28 @@ async function rephraseWithContext(currentQuestion, rawHistory, rephrase_system_
     // Format chat history as string
     const chatHistoryString = formatChatHistory(rawHistory);
     
-    const systemPrompt = rephrase_system_prompt
+    const systemPrompt = `Your task is to rephrase the user's current question in a context-aware manner using the provided chat history.  
+    ### **Rephrasing Rules:**
+    ${rephrasing_rules}
+    
+    ### **Conflict Resolution:** 
+    ${rephrasing_conflict_resolution_rules}
+
+    ### **Examples:**  
+    #### Correct Behavior:
+    ${rephrasing_examples}
+    `
     const userPrompt = `### Chat History  
 ${chatHistoryString}  
 
 ### Current User Question  
 ${currentQuestion}  
-${rephrase_user_prompt} 
-`
+Rephrase the user's question using the provided context.
+
+- Prioritize user intent and clarity while ensuring the question remains concise.  
+- Avoid fabricating information or assuming context where none exists.`
+// ${rephrase_user_prompt} 
+
     console.log(`rephrase user prompt : ${userPrompt}`);
     // Make API call to OpenAI
     let service = new OpenAIService({ useGlobalConfig : true })
@@ -255,6 +287,9 @@ async function performRag(rephrasedQuestion) {
 
     // 2. Perform semantic search to find similar questions
     console.log("Performing semantic search...");
+    // if in production
+    // const park = context.getTenant();
+    // else hard code it
     const park = "almullaexchange";
     const searchResults = await semanticSearch(
       questionEmbedding,
@@ -303,16 +338,26 @@ module.exports = function ($, { session, execute, contactId }) {
         return histForIntent;
       });
     }
+    getHistoryWithIntent(sessionId){
+      return this.chain(async function (parentResp) {
+        const rawHistory = await getRecentWebChats(sessionId);
+        const history = formatChatHistoryForIntent(rawHistory);
+        // console.log(`history dorag : ${JSON.stringify(history)}`)
+        return { history , rawHistory };
+      });
+    }
 
     rephrase(message) {
       return this.chain(async function (parentResp) {
         console.log(`message in dorag snippet: ${JSON.stringify(message)}`);
-        const { rephrase_system_prompt, rephrase_user_prompt } = await $.app.options.custom();
+        // const { rephrase_system_prompt, rephrase_user_prompt } = await $.app.options.custom();
+        const { rephrasing_rules , rephrasing_conflict_resolution_rules , rephrasing_examples } = await $.app.options.custom();
         const rephrasedQuestion = await rephraseWithContext(
           message.userquestion,
           message.rawHistory,
-          rephrase_system_prompt,
-          rephrase_user_prompt
+          rephrasing_rules,
+          rephrasing_conflict_resolution_rules,
+          rephrasing_examples
         );
         console.log(`rephrased question : ${rephrasedQuestion}`);
         return rephrasedQuestion;
@@ -324,14 +369,30 @@ module.exports = function ($, { session, execute, contactId }) {
         return topMatches;
       });
     }
+    rephraseWithRag(message) {
+      return this.chain(async function (parentResp) {
+        console.log(`message in dorag snippet: ${JSON.stringify(message)}`);
+        // const { rephrase_system_prompt, rephrase_user_prompt } = await $.app.options.custom();
+        const { rephrasing_rules , rephrasing_conflict_resolution_rules , rephrasing_examples } = await $.app.options.custom();
+        const rephrasedQuestion = await rephraseWithContext(
+          message.userquestion,
+          message.rawHistory,
+          rephrasing_rules,
+          rephrasing_conflict_resolution_rules,
+          rephrasing_examples
+        );
+        console.log(`rephrased question : ${rephrasedQuestion}`);
+        const topMatches = await performRag(rephrasedQuestion);
+        return { rephrasedQuestion , topMatches };
+      });
+    }
     askllm(context) {
       return this.chain(async function (parentResp) {
-        const { ask_llm_system_prompt, ask_llm_user_prompt } = await $.app.options.custom();
+        const { bot_introduction } = await $.app.options.custom();
         const answer = await getModelResponse(
           context.relevantInfo,
           context.rephrasedQuestion,
-          ask_llm_system_prompt,
-          ask_llm_user_prompt
+          bot_introduction
         );
         return answer;
       });
