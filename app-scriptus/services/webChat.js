@@ -1,4 +1,4 @@
-const { sebChatSchema, webChatSchema } = require("../models/WebChatModel");
+const { webChatSchema } = require("../models/WebChatModel");
 // const { openai } = require("../models/clients");
 const mongon = require("@bootloader/mongon");
 const OpenAIService = require("../../@core/scriptus/clients/OpenAIService")
