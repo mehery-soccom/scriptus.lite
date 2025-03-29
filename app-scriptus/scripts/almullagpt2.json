@@ -6,6 +6,6 @@
     "rephrase_user_prompt": "\n- **If the user explicitly states a country, do NOT change it.**  \n- **If no country is mentioned, use the most recent one from chat history.**  \n- If the question is about services, products, or remittance methods, do NOT inject any country unless explicitly mentioned.    \n- In case of conflicting countries, **default to the country mentioned in the user's latest question**.",
     "bot_introduction": "You are an AI assistant for Al Mulla Exchange.  \nUse the provided information to answer the user's question.  \n",
     "answer_llm": "ft:gpt-4o-mini-2024-07-18:personal:remittance-bot-v2:B4QmFVQU",
-    "noInfoResponse": "I don't have that information. Please check the official website or contact customer support for assistance."
+    "no_info_response": "I don't have that information. Please check the official website or contact customer support for assistance."
   }
 }

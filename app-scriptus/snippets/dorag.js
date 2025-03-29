@@ -36,9 +36,9 @@ async function information_not_available() {
   For better understanding of your query we will transfer to agent.`;
 }
 
-async function getModelResponse({ relevantInfo, rephrasedQuestion, bot_introduction, model, noInfoResponse }) {
+async function getModelResponse({ relevantInfo, rephrasedQuestion, botIntroduction, model, noInfoResponse }) {
   let start = Date.now();
-  const systemPrompt = `${bot_introduction}
+  const systemPrompt = `${botIntroduction}
 - If the retrieved information contains an answer that matches the meaning of the user's question, respond using that information.  
 - If the wording differs but the meaning is the same, still answer using the retrieved data.  
 - If no relevant information is found, trigger information_not_available() function provided as a tool.  
@@ -184,9 +184,9 @@ function formatChatHistoryForIntent(chats) {
 async function rephraseWithContext(
   currentQuestion,
   rawHistory,
-  rephrasing_rules,
-  rephrasing_conflict_resolution_rules,
-  rephrasing_examples
+  rephrasingRules,
+  rephrasingConflict,
+  rephrasingExamples
 ) {
   try {
     // Get recent chat history
@@ -200,14 +200,14 @@ async function rephraseWithContext(
 
     const systemPrompt = `Your task is to rephrase the user's current question in a context-aware manner using the provided chat history.  
     ### **Rephrasing Rules:**
-    ${rephrasing_rules}
+    ${rephrasingRules}
     
     ### **Conflict Resolution:** 
-    ${rephrasing_conflict_resolution_rules}
+    ${rephrasingConflict}
 
     ### **Examples:**  
     #### Correct Behavior:
-    ${rephrasing_examples}
+    ${rephrasingExamples}
     `;
     const userPrompt = `### Chat History  
 ${chatHistoryString}  
@@ -359,13 +359,13 @@ module.exports = function ($, { session, execute, contactId }) {
         // const { rephrase_system_prompt, rephrase_user_prompt } = await $.app.options.custom();
         const { rephrasing_rules, rephrasing_conflict_resolution_rules, rephrasing_examples } =
           await $.app.options.custom();
-        const rephrasedQuestion = await rephraseWithContext(
-          message.userquestion,
-          message.rawHistory,
-          rephrasing_rules,
-          rephrasing_conflict_resolution_rules,
-          rephrasing_examples
-        );
+        const rephrasedQuestion = await rephraseWithContext({
+          currentQuestion: message.userquestion,
+          rawHistory: message.rawHistory,
+          rephrasingRules: rephrasing_rules,
+          rephrasingConflict: rephrasing_conflict_resolution_rules,
+          rephrasingExamples: rephrasing_examples,
+        });
         console.log(`rephrased question : ${rephrasedQuestion}`);
         return rephrasedQuestion;
       });
@@ -376,32 +376,38 @@ module.exports = function ($, { session, execute, contactId }) {
         return topMatches;
       });
     }
-    rephraseWithRag(message) {
+    rephraseWithRag({ message, rephrasingRules, rephrasingConflict, rephrasingExamples }) {
       return this.chain(async function (parentResp) {
         console.log(`message in dorag snippet: ${JSON.stringify(message)}`);
-        // const { rephrase_system_prompt, rephrase_user_prompt } = await $.app.options.custom();
-        const { rephrasing_rules, rephrasing_conflict_resolution_rules, rephrasing_examples } =
-          await $.app.options.custom();
-        const rephrasedQuestion = await rephraseWithContext(
-          message.userquestion,
-          message.rawHistory,
-          rephrasing_rules,
-          rephrasing_conflict_resolution_rules,
-          rephrasing_examples
-        );
+        const rephrasedQuestion = await rephraseWithContext({
+          currentQuestion: message.userquestion,
+          rawHistory: message.rawHistory,
+          rephrasingRules,
+          rephrasingConflict,
+          rephrasingExamples,
+        });
         console.log(`rephrased question : ${rephrasedQuestion}`);
         const topMatches = await performRag(rephrasedQuestion);
-        return { rephrasedQuestion, topMatches };
+
+        let relevantInfo = "";
+        const matches = [];
+        console.log(`topmatches : ${JSON.stringify(topMatches)}`);
+        for (let i = 0; i < topMatches.length; i++) {
+          const newInfo = `${i + 1}. ${topMatches[i].knowledgebase} \n`;
+          matches.push({ knowledgebase: newInfo, score: topMatches[i].score });
+          relevantInfo += newInfo;
+        }
+
+        return { rephrasedQuestion, topMatches, relevantInfo, matches };
       });
     }
-    askllm({ relevantInfo, rephrasedQuestion, noInfoAnswer }) {
+    askllm({ botIntroduction, relevantInfo, rephrasedQuestion, noInfoResponse, model }) {
       return this.chain(async function (parentResp) {
-        const { bot_introduction, answer_llm } = await $.app.options.custom();
         const answer = await getModelResponse({
           relevantInfo: relevantInfo,
           rephrasedQuestion: rephrasedQuestion,
-          bot_introduction: bot_introduction,
-          model: answer_llm,
+          botIntroduction: botIntroduction,
+          model: model,
           noInfoResponse: noInfoResponse || information_not_available(),
         });
         return answer;
