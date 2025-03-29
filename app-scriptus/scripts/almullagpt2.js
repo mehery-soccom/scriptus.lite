@@ -180,7 +180,7 @@ async function onHandleDefault() {
           relevantInfo += newInfo;
         }
         console.log(`relevant info : ${relevantInfo}`);
-        const context = { relevantInfo , rephrasedQuestion };
+        const context = { relevantInfo , rephrasedQuestion,noInfoResponse };
         const answer = await $.dorag().askllm(context);
         const convo = { sessionId ,contactId, rephrasedQuestion, matches,
           messages: {
