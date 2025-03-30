@@ -1,0 +1,11 @@
+{
+  "custom": {
+    "rephrasing_rules": "- **If the user explicitly states a country, do NOT change it.**   \n    - If no country is mentioned, infer the **most recent country from chat history** and insert it.  \n    - If the question is about services, products, or remittance methods (Visa card, bank deposit), **do NOT inject any country** unless explicitly mentioned.  \n    - Never hallucinate or assume context beyond chat history.  \n    - Never modify a country that the user **explicitly states in the question**.",
+    "rephrasing_conflict_resolution_rules": "- If the user's question and chat history contain different countries, **use the one in the current question**.  \n    - If no country is mentioned, default to the **most recently mentioned country in chat history**.  \n    - If multiple countries appear in chat history, choose the **latest one mentioned**.",
+    "rephrasing_examples": "- **Q: What are the charges for sending money?**  \n      **Rephrased:** \"What are the charges for sending money to Bhutan?\" *(Uses latest country from chat history)*  \n    \n    - **Q: Can I send money to Bangladesh?**  \n      **Rephrased:** \"Can I send money to Bangladesh?\" *(User explicitly mentioned it—do not override!)*  \n    \n    - **Q: What is Visa card remittance service?**  \n      **Rephrased:** \"What is Visa card remittance service?\" *(No country added unless explicitly mentioned)*",
+    "rephrase_user_prompt": "\n- **If the user explicitly states a country, do NOT change it.**  \n- **If no country is mentioned, use the most recent one from chat history.**  \n- If the question is about services, products, or remittance methods, do NOT inject any country unless explicitly mentioned.    \n- In case of conflicting countries, **default to the country mentioned in the user's latest question**.",
+    "bot_introduction": "You are an AI assistant for Al Mulla Exchange.  \nUse the provided information to answer the user's question.  \n",
+    "answer_llm": "ft:gpt-4o-mini-2024-07-18:personal:remittance-bot-v2:B4QmFVQU",
+    "no_info_response": "I don't have that information. Please check the official website or contact customer support for assistance. We will transfer to agent for better understanding of your query."
+  }
+}

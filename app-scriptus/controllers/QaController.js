@@ -14,8 +14,8 @@ const questionSchema = z.object({
 
 // Main schema with required fields
 const qapairs = z.object({
-  kb_id: z.string({ required_error: "kb_id is required." }).uuid({ message: "kb_id must be a valid UUID." }),
-  article_id: z.string({ required_error: "article_id is required." }).uuid({ message: "article_id must be a valid UUID." }),
+  kb_id: z.string({ required_error: "kb_id is required." }).min(1, { message: "kb_id cannot be empty." }),
+  article_id: z.string({ required_error: "article_id is required." }).min(1, { message: "article_id cannot be empty." }),
   ques: z
     .array(questionSchema, { required_error: "ques array is required." })
     .nonempty({ message: "ques array cannot be empty." })
@@ -95,9 +95,9 @@ export default class QaController {
       }
     }
     
-    const tenant_domain =  context.getTenant(); //"kedar";
-    const server = config.getIfPresent("mry.scriptus.server");
-    const tenant_partition_key = `${tenant_domain}.${server}`;
+    // const tenant_domain =   //"kedar";
+    // const server = config.getIfPresent("mry.scriptus.server");
+    const tenant_partition_key = context.getTenant();
     // console.log(`<<<<<TENANT: ${JSON.stringify(tenant_partition_key)}`, );
     const ques = body.ques;
     const kb_id = body.kb_id;
@@ -116,7 +116,7 @@ export default class QaController {
     }
     // console.log(`data : ${JSON.stringify(data)}`)
     const res = await insertQaPairs(collection_name,data);
-    // console.log(JSON.stringify(res));
+    console.log(JSON.stringify(res));
     return { tenant_partition_key, ques, kb_id, article_id , collection_name , result : res };
   }
 
