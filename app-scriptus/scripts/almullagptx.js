@@ -176,11 +176,11 @@ async function onHandleDefault() {
         console.log(`contactId: ${contactId}`);
         console.log(`sessionId: ${sessionId}`);
         console.log(`userquestion: ${userquestion}`);
-        let message = { userquestion, rawHistory };
+        
         // const rephrasedQuestion = await $.dorag().rephrase(message);
         // const topMatches = await $.dorag().rag(rephrasedQuestion);
-        const { rephrasedQuestion, topMatches, relevantInfo, matches } = await $.dorag().rephraseWithRag({
-          message,
+        const { rephrasedQuestion, relevantInfo, matches } = await $.dorag().rephraseWithRag({
+          userquestion , rawHistory ,
           rephrasingRules: rephrasing_rules,
           rephrasingConflict: rephrasing_conflict_resolution_rules,
           rephrasingExamples: rephrasing_examples,

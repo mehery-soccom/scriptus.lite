@@ -7,6 +7,7 @@ import { MetricType } from "@zilliz/milvus2-sdk-node";
 import { getExeTime } from "../../@core/utils/exetime";
 import mongon from "@bootloader/mongon";
 import { context } from "@bootloader/utils";
+import { raw } from "body-parser";
 const OpenAIService = require("../../@core/scriptus/clients/OpenAIService");
 
 async function generateEmbeddingOpenAi(text, dims = 512) {
@@ -36,9 +37,9 @@ async function information_not_available() {
   For better understanding of your query we will transfer to agent.`;
 }
 
-async function getModelResponse({ relevantInfo, rephrasedQuestion, botIntroduction, model, noInfoResponse }) {
+async function getModelResponse(context) {
   let start = Date.now();
-  const systemPrompt = `${botIntroduction}
+  const systemPrompt = `${context.botIntroduction}
 - If the retrieved information contains an answer that matches the meaning of the user's question, respond using that information.  
 - If the wording differs but the meaning is the same, still answer using the retrieved data.  
 - If no relevant information is found, trigger information_not_available() function provided as a tool.  
@@ -47,10 +48,10 @@ async function getModelResponse({ relevantInfo, rephrasedQuestion, botIntroducti
 Never invent information. Prioritize using retrieved knowledge.`;
   const userPrompt = `
 ### Relevant Information
-${relevantInfo}
+${context.relevantInfo}
 
 ### User Question
-${rephrasedQuestion}
+${context.rephrasedQuestion}
 
 Answer the user's question using **the most relevant retrieved information from the Relevant Information above**.  
 - If a retrieved FAQ answers the question (even if wording differs), provide that answer.  
@@ -60,7 +61,7 @@ Answer the user's question using **the most relevant retrieved information from 
   let service = new OpenAIService({ useGlobalConfig: true });
   let { client: openai, config } = await service.init();
   const completion = await openai.chat.completions.create({
-    model,
+    model : context.model,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -88,7 +89,7 @@ Answer the user's question using **the most relevant retrieved information from 
 
   if (completion.choices[0].message.content === null) {
     const answer = {
-      ans: noInfoResponse,
+      ans: context.noInfoResponse,
       valid: false,
     };
     console.log(completion.usage);
@@ -181,39 +182,34 @@ function formatChatHistoryForIntent(chats) {
  * @param {string} currentQuestion - The current question from the user
  * @returns {Promise<string>} The rephrased question
  */
-async function rephraseWithContext(
-  currentQuestion,
-  rawHistory,
-  rephrasingRules,
-  rephrasingConflict,
-  rephrasingExamples
-) {
+async function rephraseWithContext(context) {
   try {
     // Get recent chat history
     // console.log(`in rephraser : ${sessionId}`);
-    console.log(`in rephraser : ${currentQuestion}`);
+    console.log(`in rephraser : ${context.currentQuestion}`);
+    console.log(`rawHistory in rephraseWithContext : ${context.rawHistory}`);
     // const recentChats = await getRecentWebChats(sessionId);
     // console.log(`recent chats : ${JSON.stringify(recentChats)}`);
-    if (rawHistory.length === 0) return currentQuestion;
+    if (context.rawHistory.length === 0) return context.currentQuestion;
     // Format chat history as string
-    const chatHistoryString = formatChatHistory(rawHistory);
+    const chatHistoryString = formatChatHistory(context.rawHistory);
 
     const systemPrompt = `Your task is to rephrase the user's current question in a context-aware manner using the provided chat history.  
     ### **Rephrasing Rules:**
-    ${rephrasingRules}
+    ${context.rephrasingRules}
     
     ### **Conflict Resolution:** 
-    ${rephrasingConflict}
+    ${context.rephrasingConflict}
 
     ### **Examples:**  
     #### Correct Behavior:
-    ${rephrasingExamples}
+    ${context.rephrasingExamples}
     `;
     const userPrompt = `### Chat History  
 ${chatHistoryString}  
 
 ### Current User Question  
-${currentQuestion}  
+${context.currentQuestion}  
 Rephrase the user's question using the provided context.
 
 - Prioritize user intent and clarity while ensuring the question remains concise.  
@@ -376,12 +372,12 @@ module.exports = function ($, { session, execute, contactId }) {
         return topMatches;
       });
     }
-    rephraseWithRag({ message, rephrasingRules, rephrasingConflict, rephrasingExamples }) {
+    rephraseWithRag({ userquestion , rawHistory , rephrasingRules, rephrasingConflict, rephrasingExamples }) {
       return this.chain(async function (parentResp) {
-        console.log(`message in dorag snippet: ${JSON.stringify(message)}`);
+        
         const rephrasedQuestion = await rephraseWithContext({
-          currentQuestion: message.userquestion,
-          rawHistory: message.rawHistory,
+          currentQuestion: userquestion,
+          rawHistory: rawHistory,
           rephrasingRules,
           rephrasingConflict,
           rephrasingExamples,
@@ -398,7 +394,7 @@ module.exports = function ($, { session, execute, contactId }) {
           relevantInfo += newInfo;
         }
 
-        return { rephrasedQuestion, topMatches, relevantInfo, matches };
+        return { rephrasedQuestion, relevantInfo, matches };
       });
     }
     askllm({ botIntroduction, relevantInfo, rephrasedQuestion, noInfoResponse, model }) {
