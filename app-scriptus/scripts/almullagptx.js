@@ -87,9 +87,9 @@ async function onHandleDefault() {
   const contactId = inboundMessage.message.contactId;
   const sessionId = inboundMessage.message.session.sessionId;
   const userquestion = inboundMessage.message.text.body;
-  let rawHistory = await $.dorag().getHistory(sessionId);
-  let history = await $.dorag().getHistoryForIntent(rawHistory);
-  
+  // let rawHistory = await $.dorag().getHistory(sessionId);
+  // let history = await $.dorag().getHistoryForIntent(rawHistory);
+  let { history, rawHistory } = await $.dorag().getHistoryWithIntent(sessionId);
 
   // let { history } = await $.store.local("history");
   history = history || [];
@@ -103,7 +103,6 @@ async function onHandleDefault() {
   console.log("I am after intent creation");
   let resp = await $.openai({ useGlobalConfig: true }).next(prompt, functions);
   console.log("I am after open ai call creation");
-  
 
   //console.log("resp", resp);
   console.log("resp.message()", resp.message());
@@ -128,7 +127,7 @@ async function onHandleDefault() {
               response: cleanedContent || content,
             },
           };
-        } else if (["faq_query", "exchange_rates","connect_agent"].indexOf(content) > -1) {
+        } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
           return {
             name: content,
             args: {},
@@ -150,51 +149,68 @@ async function onHandleDefault() {
         } else {
           text = await showExchangeRate(args.currency);
         }
-        const convo = { sessionId ,contactId, rephrasedQuestion : userquestion, 
+        const convo = {
+          sessionId,
+          contactId,
+          rephrasedQuestion: userquestion,
           messages: {
             user: userquestion,
-            assistant: answer.ans
-          }
+            assistant: answer.ans,
+          },
         };
 
         const savedChat = await $.dorag().saveConvo(convo);
         await respond(text, history, true);
       })
       .on("*", async function ({ content }) {
+        const {
+          bot_introduction,
+          no_info_response,
+          rephrasing_rules,
+          rephrasing_conflict_resolution_rules,
+          rephrasing_examples,
+          answer_llm,
+        } = await $.session.app.options();
         console.log(`CONTENT : ${JSON.stringify(content)}`);
         console.log("INTENT:faq_query");
         console.log(`contactId: ${contactId}`);
         console.log(`sessionId: ${sessionId}`);
         console.log(`userquestion: ${userquestion}`);
-        let message = { userquestion , rawHistory };
-        const rephrasedQuestion = await $.dorag().rephrase(message);
-        const topMatches = await $.dorag().rag(rephrasedQuestion);
-
-        let relevantInfo = "";
-        const matches = [];
-        for (let i = 0; i < topMatches.length; i++) {
-          const newInfo = isOpenAi
-            ? `${i + 1}. Question : ${topMatches[i].question} \n Answer : ${topMatches[i].answer} \n`
-            : `${i + 1}. ${topMatches[i].knowledgebase} \n`;
-          matches.push({ knowledgebase: newInfo, score: topMatches[i].score });
-          relevantInfo += newInfo;
-        }
-        const context = { relevantInfo , rephrasedQuestion };
-        const answer = await $.dorag().askllm(context);
-        const convo = { sessionId ,contactId, rephrasedQuestion, matches,
+        
+        // const rephrasedQuestion = await $.dorag().rephrase(message);
+        // const topMatches = await $.dorag().rag(rephrasedQuestion);
+        const { rephrasedQuestion, relevantInfo, matches } = await $.dorag().rephraseWithRag({
+          userquestion , rawHistory ,
+          rephrasingRules: rephrasing_rules,
+          rephrasingConflict: rephrasing_conflict_resolution_rules,
+          rephrasingExamples: rephrasing_examples,
+        });
+        console.log(`relevant info : ${relevantInfo}`);
+        const answer = await $.dorag().askllm({
+          botIntroduction: bot_introduction,
+          relevantInfo,
+          rephrasedQuestion,
+          noInfoResponse: no_info_response,
+          model: answer_llm,
+        });
+        const convo = {
+          sessionId,
+          contactId,
+          rephrasedQuestion,
+          matches,
           messages: {
             user: userquestion,
-            assistant: answer.ans
-          }
+            assistant: answer.ans,
+          },
         };
 
         const savedChat = await $.dorag().saveConvo(convo);
-        if(answer.valid){
-          await respond(answer.ans,history);
+        if (answer.valid) {
+          await respond(answer.ans, history);
         } else {
-          await assignToAgent(history , answer.ans);
+          await assignToAgent(history, answer.ans);
         }
-        
+
         // let resp = await $.reply(`${answer}`);
         // const options = await $.session.app.options();
         // console.log("code : options.knowbase", options.knowbase);

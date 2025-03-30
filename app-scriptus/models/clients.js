@@ -2,7 +2,7 @@ const { DataType, IndexType, MetricType, MilvusClient } = require("@zilliz/milvu
 const { OpenAI } = require("openai");
 const config = require("@bootloader/config");
 const console = require("@bootloader/log4js").getLogger("clients");
-
+import { context } from "@bootloader/utils";
 const address = config.getIfPresent("milvus.url");
 const token = config.getIfPresent("milvus.token");
 // console.log(`milvus url = ${address}`)
