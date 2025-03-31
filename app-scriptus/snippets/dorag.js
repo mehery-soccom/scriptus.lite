@@ -249,7 +249,7 @@ Rephrase the user's question using the provided context.
     // const rephrasedQuestion = completion.choices[0].message.content.trim();
 
     const rephrasedQuestion = JSON.parse(completion.choices[0].message.content).rephrasedQuestion;
-    console.log(`Original: "${currentQuestion}"\nRephrased: "${rephrasedQuestion}"`);
+    console.log(`Original: "${context.currentQuestion}"\nRephrased: "${rephrasedQuestion}"`);
     console.log(completion.usage);
     return rephrasedQuestion;
   } catch (error) {
