@@ -15,11 +15,12 @@ export default class InboundQueue {
   async execute(message, { queue }) {
     //console.log("InboundQueue > execute > " + queue, JSON.stringify(message));
     const contact_id = queue;
+    const sessionId = queue;
     try {
       new ChatBox({
         adapter: message.meta
-          ? new XMSAdapter({ message: message, contact_id })
-          : new LocalAdapter({ message: message, contact_id }),
+          ? new XMSAdapter({ message: message, contact_id, sessionId })
+          : new LocalAdapter({ message: message, contact_id, sessionId }),
       }).execute();
     } catch (e) {
       console.error("InboundQueue > execute > ", e);

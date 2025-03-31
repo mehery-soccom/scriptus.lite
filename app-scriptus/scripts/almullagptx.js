@@ -82,14 +82,12 @@ async function onMessageReceive() {
 async function onHandleDefault() {
   //console.log("onHandleDefault");
   const isOpenAi = true;
-  const inboundMessage = $.inbound;
   // console.log(`message : ${JSON.stringify(inboundMessage)}`)
-  const contactId = inboundMessage.message.contactId;
-  const sessionId = inboundMessage.message.session.sessionId;
-  const userquestion = inboundMessage.message.text.body;
+  const contactId = $.inbound.contact.id;
+  const userquestion = $.inbound.getText();
   // let rawHistory = await $.dorag().getHistory(sessionId);
   // let history = await $.dorag().getHistoryForIntent(rawHistory);
-  let { history, rawHistory } = await $.dorag().getHistoryWithIntent(sessionId);
+  let { history, rawHistory, sessionId } = await $.dorag().getHistoryWithIntent();
 
   // let { history } = await $.store.local("history");
   history = history || [];
