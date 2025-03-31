@@ -40,14 +40,18 @@ async function request(url, method, headers, body) {
 }
 
 function RespPromise(promise) {
-  this.text = async function () {
+  this.text = async function (callback) {
     let response = await promise;
-    return await response.text();
+    let textResponse = await response.text();
+    if (typeof callback == "function") return await callback(textResponse);
+    return textResponse;
   };
 
-  this.json = async function () {
+  this.json = async function (callback) {
     let response = await promise;
-    return await response.json();
+    let jsonResponse = await response.json();
+    if (typeof callback == "function") return await callback(jsonResponse);
+    return jsonResponse;
   };
 }
 
