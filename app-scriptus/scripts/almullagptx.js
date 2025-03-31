@@ -155,7 +155,7 @@ async function onHandleDefault() {
           rephrasedQuestion: userquestion,
           messages: {
             user: userquestion,
-            assistant: answer.ans,
+            assistant: text,
           },
         };
 
