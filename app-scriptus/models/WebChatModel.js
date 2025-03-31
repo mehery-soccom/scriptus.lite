@@ -3,7 +3,7 @@ const mongon = require('@bootloader/mongon');
 const webChatSchema = mongon.Schema({
   contactId: {
     type: String,
-    required: true,
+    required:false,
     index: true  // Create an index on contactId for faster querying
   },
   sessionId : {

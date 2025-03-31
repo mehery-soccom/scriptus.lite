@@ -124,7 +124,6 @@ async function getRecentWebChats(sessionId) {
       { sessionId },
       {
         // Explicitly select only the desired fields
-        contactId: 1,
         messages: 1,
         timestamp: 1,
         rephrasedQuestion: 1,
