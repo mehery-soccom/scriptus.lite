@@ -3,8 +3,6 @@ require("./@core/babel-register"); // Ensure Babel is loaded first
 const { name } = require("@bootloader/redison/info");
 const { BootLoader } = require("./@core");
 
-const console = require("@bootloader/log4js").getLogger("Server");
-
 new BootLoader()
   .map({
     context: "/",
@@ -36,13 +34,3 @@ new BootLoader()
     console.log(`APP[${name}]: Launched`);
   })
   .initJobs();
-
-// Prevent crashes due to unhandled promise rejections
-process.on("unhandledRejection", (err) => {
-  console.error("🔥 Unhandled Promise Rejection:", err);
-});
-
-// Prevent crashes due to uncaught exceptions
-process.on("uncaughtException", (err) => {
-  console.error("💥 Uncaught Exception:", err);
-});
