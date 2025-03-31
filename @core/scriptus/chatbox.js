@@ -128,7 +128,7 @@ function ChatBox({ adapter }) {
     return context;
   };
 
-  this.execute = async function () {
+  this.executeNative = async function () {
     const { contact } = await this.context();
     const sb = await this.init({ contact });
 
@@ -196,6 +196,14 @@ function ChatBox({ adapter }) {
       await BotContextStore.commit(commitDetails);
     }
     //
+  };
+
+  this.execute = async function () {
+    try {
+      return await this.executeNative();
+    } catch (e) {
+      console.error("Message Process Failed : Skipping Message", e);
+    }
   };
 }
 

@@ -176,11 +176,12 @@ async function onHandleDefault() {
         console.log(`contactId: ${contactId}`);
         console.log(`sessionId: ${sessionId}`);
         console.log(`userquestion: ${userquestion}`);
-        
+
         // const rephrasedQuestion = await $.dorag().rephrase(message);
         // const topMatches = await $.dorag().rag(rephrasedQuestion);
         const { rephrasedQuestion, relevantInfo, matches } = await $.dorag().rephraseWithRag({
-          userquestion , rawHistory ,
+          userquestion,
+          rawHistory,
           rephrasingRules: rephrasing_rules,
           rephrasingConflict: rephrasing_conflict_resolution_rules,
           rephrasingExamples: rephrasing_examples,
@@ -290,6 +291,7 @@ async function create_prompt(systemContents, history, instructions) {
 }
 
 async function create_intent(history) {
+  //console.log("create_intent",options);
   const options = await $.session.app.options();
   //console.log("====options====",options);
   return await create_prompt(
@@ -391,18 +393,22 @@ async function assignToAgent(history, response) {
 
 async function showExchangeRate(currency) {
   //console.log("showExchangeRate", currency);
-  if (currency)
-    return await $.rest({
-      url: `${apiEndPoint}/webchat/exchangeRate?currencyCode=${currency}&getPredecidedExchRates=false`,
-    })
-      .get()
-      .json(showExchangeRateResults);
-  else {
-    return await $.rest({
-      url: `${apiEndPoint}/webchat/exchangeRate?getPredecidedExchRates=true`,
-    })
-      .get()
-      .json(showExchangeRateResults);
+  try {
+    if (currency)
+      return await $.rest({
+        url: `${apiEndPoint}/webchat/exchangeRate?currencyCode=${currency}&getPredecidedExchRates=false`,
+      })
+        .get()
+        .json(showExchangeRateResults);
+    else {
+      return await $.rest({
+        url: `${apiEndPoint}/webchat/exchangeRate?getPredecidedExchRates=true`,
+      })
+        .get()
+        .json(showExchangeRateResults);
+    }
+  } catch (e) {
+    console.log("----", e);
   }
 }
 

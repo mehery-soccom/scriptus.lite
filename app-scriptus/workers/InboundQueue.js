@@ -15,11 +15,15 @@ export default class InboundQueue {
   async execute(message, { queue }) {
     //console.log("InboundQueue > execute > " + queue, JSON.stringify(message));
     const contact_id = queue;
-    new ChatBox({
-      adapter: message.meta
-        ? new XMSAdapter({ message: message, contact_id })
-        : new LocalAdapter({ message: message, contact_id }),
-    }).execute();
+    try {
+      new ChatBox({
+        adapter: message.meta
+          ? new XMSAdapter({ message: message, contact_id })
+          : new LocalAdapter({ message: message, contact_id }),
+      }).execute();
+    } catch (e) {
+      console.error("InboundQueue > execute > ", e);
+    }
   }
 
   async poll(data) {
