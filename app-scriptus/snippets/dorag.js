@@ -61,7 +61,7 @@ Answer the user's question using **the most relevant retrieved information from 
   let service = new OpenAIService({ useGlobalConfig: true });
   let { client: openai, config } = await service.init();
   const completion = await openai.chat.completions.create({
-    model : context.model,
+    model: context.model,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -320,7 +320,7 @@ async function performRag(rephrasedQuestion) {
 
 // ONCE PER PROEJCT START
 // SCOPE : PROJECT
-module.exports = function ($, { session, execute, contactId }) {
+module.exports = function ($, { session, execute, contactId, sessionId }) {
   // ONCE PER PROEJCT MESSAE INBOUND
   // SCOPE : MESSAGE
   let SOME_VARIABLE = 0; // THIS VARIABLE CAN BE CHANGED AND MAINTAINED for ONE INBOUND MESSAGES
@@ -328,7 +328,7 @@ module.exports = function ($, { session, execute, contactId }) {
     constructor(executor = (resolve) => resolve(0)) {
       super(executor);
     }
-    getHistory(sessionId) {
+    getHistory() {
       return this.chain(async function (parentResp) {
         const rawHistory = await getRecentWebChats(sessionId);
         return rawHistory;
@@ -340,12 +340,12 @@ module.exports = function ($, { session, execute, contactId }) {
         return histForIntent;
       });
     }
-    getHistoryWithIntent(sessionId) {
+    getHistoryWithIntent() {
       return this.chain(async function (parentResp) {
         const rawHistory = await getRecentWebChats(sessionId);
         const history = formatChatHistoryForIntent(rawHistory);
         // console.log(`history dorag : ${JSON.stringify(history)}`)
-        return { history, rawHistory };
+        return { history, rawHistory, sessionId };
       });
     }
 
@@ -372,9 +372,8 @@ module.exports = function ($, { session, execute, contactId }) {
         return topMatches;
       });
     }
-    rephraseWithRag({ userquestion , rawHistory , rephrasingRules, rephrasingConflict, rephrasingExamples }) {
+    rephraseWithRag({ userquestion, rawHistory, rephrasingRules, rephrasingConflict, rephrasingExamples }) {
       return this.chain(async function (parentResp) {
-        
         const rephrasedQuestion = await rephraseWithContext({
           currentQuestion: userquestion,
           rawHistory: rawHistory,
