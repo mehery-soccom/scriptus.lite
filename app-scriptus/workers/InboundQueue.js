@@ -13,7 +13,7 @@ export default class InboundQueue {
   }
 
   async execute(message, { queue }) {
-    console.log("InboundQueue > execute > " + queue, JSON.stringify(message));
+    //console.log("InboundQueue > execute > " + queue, JSON.stringify(message));
     const contact_id = queue;
     new ChatBox({
       adapter: message.meta

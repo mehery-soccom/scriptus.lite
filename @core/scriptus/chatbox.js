@@ -32,7 +32,8 @@ function ChatBox({ adapter }) {
       },
     });
 
-    //console.log("===",sb.getScript())
+    let script = await sb.loaded();
+    //console.log("===sb.getScript",script)
     //Create Snippets Context
     const $ = new Snippets({
       //Meta
@@ -41,7 +42,7 @@ function ChatBox({ adapter }) {
       session: session, //??
       userData: userData,
       config: {}, //scriptConfig ???
-      script: sb.getScript(),
+      script: script,
       domainbox: cachebox({
         name: "domainbox",
         domain: context.domain,

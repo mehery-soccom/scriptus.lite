@@ -3,6 +3,7 @@ const config = require("@bootloader/config");
 const ajax = require("../../ajax");
 const { string } = require("../../utils");
 const { cachebox } = require("@bootloader/redison");
+const console = require("@bootloader/log4js").getLogger("XMSAdapeter");
 
 var secretKey = config.getIfPresent("mry.scriptus.secret");
 var scriptusServer = config.getIfPresent("mry.scriptus.server");
@@ -184,8 +185,9 @@ function XMSAdapeter({ message: messageBody }) {
     });
     const json = await response.json();
     if (json.statusKey == "SUCCESS") {
-      console.log("xms:SUCCESS");
+      //console.log("xms:SUCCESS");
     } else {
+      console.log("xms:REQUEST", JSON.stringify(formData));
       console.log("xms:FAILED" + json.statusKey, json);
     }
 
