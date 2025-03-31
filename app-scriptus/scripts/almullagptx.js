@@ -83,7 +83,6 @@ async function onHandleDefault() {
   //console.log("onHandleDefault");
   const isOpenAi = true;
   // console.log(`message : ${JSON.stringify(inboundMessage)}`)
-  const contactId = $.inbound.contact.id;
   const userquestion = $.inbound.getText();
   // let rawHistory = await $.dorag().getHistory(sessionId);
   // let history = await $.dorag().getHistoryForIntent(rawHistory);
@@ -147,9 +146,9 @@ async function onHandleDefault() {
         } else {
           text = await showExchangeRate(args.currency);
         }
+        
         const convo = {
           sessionId,
-          contactId,
           rephrasedQuestion: userquestion,
           messages: {
             user: userquestion,
@@ -171,7 +170,6 @@ async function onHandleDefault() {
         } = await $.session.app.options();
         console.log(`CONTENT : ${JSON.stringify(content)}`);
         console.log("INTENT:faq_query");
-        console.log(`contactId: ${contactId}`);
         console.log(`sessionId: ${sessionId}`);
         console.log(`userquestion: ${userquestion}`);
 
@@ -194,7 +192,6 @@ async function onHandleDefault() {
         });
         const convo = {
           sessionId,
-          contactId,
           rephrasedQuestion,
           matches,
           messages: {
