@@ -146,7 +146,7 @@ async function onHandleDefault() {
         } else {
           text = await showExchangeRate(args.currency);
         }
-        
+
         const convo = {
           sessionId,
           rephrasedQuestion: userquestion,
@@ -404,6 +404,11 @@ async function showExchangeRate(currency) {
     }
   } catch (e) {
     console.log("----", e);
+    await $.reply({
+      text: {
+        body: `Unable to fetch exchange rates. Please try again later.`,
+      },
+    });
   }
 }
 
