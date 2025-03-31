@@ -3,6 +3,8 @@ require("./@core/babel-register"); // Ensure Babel is loaded first
 const { name } = require("@bootloader/redison/info");
 const { BootLoader } = require("./@core");
 
+const console = require("@bootloader/log4js").getLogger("Server");
+
 new BootLoader()
   .map({
     context: "/",
