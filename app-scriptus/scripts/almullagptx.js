@@ -404,11 +404,13 @@ async function showExchangeRate(currency) {
     }
   } catch (e) {
     console.log("----", e);
+    let message = `Unable to fetch exchange rates. Please try again later.`;
     await $.reply({
       text: {
-        body: `Unable to fetch exchange rates. Please try again later.`,
+        body: message,
       },
     });
+    return message;
   }
 }
 
