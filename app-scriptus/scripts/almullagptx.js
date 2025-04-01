@@ -114,7 +114,7 @@ async function onHandleDefault() {
         //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
         const match = content?.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
         if (match && match.groups) {
-          //console.log("MATCHED")
+          //console.log("function_call:MATCHED")
           let arg1 = match.groups.params ? match.groups.params.trim() : null;
           let cleanedContent = content.replace(match[0], "").trim();
           //console.log("cleanedContent=",cleanedContent)
@@ -126,11 +126,13 @@ async function onHandleDefault() {
             },
           };
         } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
+          //console.log("function_call:MAPPED")
           return {
             name: content,
             args: {},
           };
         }
+        //console.log("function_call:NONE")
         return {
           // name: "greetings", args: {}
         };

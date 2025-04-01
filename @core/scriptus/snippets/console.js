@@ -1,5 +1,5 @@
 const mongon = require("@bootloader/mongon");
-const BotLogSchema = require("../model/BotLogSchema");
+const BotLogSchema = require("../model/BotConsoleSchema");
 
 var log = Function.prototype.bind.call(console.log, console);
 var debug = Function.prototype.bind.call(console.debug, console);
@@ -8,7 +8,7 @@ var error = Function.prototype.bind.call(console.error, console);
 
 async function logger({ app_id, contact_id, domain }, { level, type, logs }) {
   try {
-    let BotLog = mongon.model(BotLogSchema, { domain });
+    let BotLog = mongon.model(BotLogSchema);
     const botLog = new BotLog({
       domain: domain,
       app_id: app_id,
@@ -27,7 +27,7 @@ async function logger({ app_id, contact_id, domain }, { level, type, logs }) {
     });
     return await botLog.save();
   } catch (e) {
-    console.log("CONSOLE SAVE EXCEPTION", e);
+    log("CONSOLE SAVE EXCEPTION", e);
   }
 }
 
