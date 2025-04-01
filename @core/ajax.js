@@ -103,7 +103,8 @@ export default function (options) {
           "Content-Type": "application/json",
           ...options.headers,
         },
-        JSON.stringify(json)
+        JSON.stringify(json),
+        options
       );
     },
     put(json) {
