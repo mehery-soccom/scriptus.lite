@@ -59,8 +59,8 @@ async function listenHandler() {
 async function onMessageReceive() {
   //return await onHandleDefault();
   let inputCode = ($.inbound.getCode() || "").toUpperCase();
-  $.logger.log("handleInput",inputCode);
-  $.console.log("handleInput",inputCode);
+  //$.logger.log("handleInput", inputCode);
+  //$.console.log("handleInput", inputCode);
   switch (inputCode) {
     case "C":
     case "#":
@@ -433,6 +433,9 @@ async function showExchangeRateResults(json) {
           //The Currency Code entered is invalid. Please enter a valid 3 Letter Currency Code to get the rate. Eg.: USD for US Dollars
           break;
         default:
+          if (json.status.indexOf("Setup Missing") > -1) {
+            console.log("showExchangeRateResults", json.status);
+          }
           template = "exchange_rate_is_not_available";
         // Sorry, this Exchange Rate is not available at this point of time. Please try again later.
       }

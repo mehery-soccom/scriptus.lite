@@ -72,7 +72,7 @@ class RespPromise extends ChainedPromise {
 
   print() {
     return this.chain(async function (parentResp) {
-      console.log("Response", parentResp);
+      $.console.log("Response", parentResp);
     });
   }
 }
@@ -82,6 +82,17 @@ export default function (options) {
     options = { url: options };
   }
   options.headers = options.headers || {};
+  if (options.useBrowser) {
+    options["User-Agent"] =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
+  }
+  if (options.acceptJson) {
+    options["Accept"] = "application/json";
+  }
+
+  if (options.keepLive) {
+    options["Connection"] = "keep-alive";
+  }
 
   return {
     post(json) {
@@ -134,9 +145,6 @@ export default function (options) {
         endUrl,
         "GET",
         {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Connection: "keep-alive",
           ...options.headers,
         },
         undefined,
