@@ -73,12 +73,6 @@ export default class ChatController {
     };
   }
 
-  @ResponseView
-  @RequestMapping({ path: "/*", method: "get" })
-  async defaultPage() {
-    return "home";
-  }
-
   @ResponseBody
   @RequestMapping({ path: "/api/messages", method: "get" })
   async getMessage({ request: { body, cookies }, headers, response }) {
@@ -89,5 +83,18 @@ export default class ChatController {
     }
     let msg = await RQueue({ key: contact_id }).pop();
     return { results: msg ? [msg] : [] };
+  }
+
+  @ResponseView
+  @RequestMapping({ path: "/*", method: "get" })
+  async defaultPage() {
+    return "home";
+  }
+
+  @ResponseBody
+  @RequestMapping({ path: "/api/session/reset", method: "delete" })
+  async resetSession({ response }) {
+    response.clearCookie("contact_id"); // Removes 'session_token' cookie
+    return {};
   }
 }
