@@ -317,6 +317,21 @@ async function performRag(rephrasedQuestion) {
   }
 }
 
+function create_prompt({ systemPrompts, conversations, instructions }) {
+  instructions = instructions || [];
+  let x = [
+    ...systemPrompts.map(function (content) {
+      return { role: "system", content: content };
+    }),
+    ...conversations,
+    ...instructions.map(function (content) {
+      return { role: "user", content: content };
+    }),
+  ];
+  //console.log("x",x)
+  return x;
+}
+
 // ONCE PER PROEJCT START
 // SCOPE : PROJECT
 module.exports = function ($, { session, execute, contactId, sessionId }) {
@@ -345,6 +360,37 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
         const history = formatChatHistoryForIntent(rawHistory);
         // console.log(`history dorag : ${JSON.stringify(history)}`)
         return { history, rawHistory, sessionId };
+      });
+    }
+
+    getIntentWithContext({ systemPrompts, instructions = [], functions }) {
+      return this.chain(async function (parentResp) {
+        const userText = $.inbound.getText();
+        let rawHistory = await getRecentWebChats(sessionId);
+        let history = formatChatHistoryForIntent(rawHistory);
+        history = history || [];
+        history.push({
+          role: "user",
+          content: userText,
+        });
+        let prompt = await create_prompt({
+          systemPrompts: systemPrompts,
+          conversations: history,
+          instructions: instructions,
+        });
+        let resp = await $.openai({ useGlobalConfig: true }).next(prompt, functions);
+        return {
+          history,
+          rawHistory,
+          sessionId,
+          function_call: function (...args) {
+            return resp.function_call(...args);
+          },
+          message(...args) {
+            return resp.message(...args);
+          },
+          userText,
+        };
       });
     }
 

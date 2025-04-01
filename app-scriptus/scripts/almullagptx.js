@@ -1,5 +1,48 @@
 var apiEndPoint = "https://apid-kwt.amxremit.com/bot/ext";
 
+function get_intent_prompt({ intent_prompt, escalation_prompt }) {
+  return [
+    `
+  ${intent_prompt}
+  
+The user will provide input, and you must classify it as one of the following intents :- 
+- "faq_query" if they have any query related to application or remittance
+- "exchange_rates" if they want exchange rate information or live rates
+- "connect_agent" if they want to talk to a live agent
+- For general greetings do not give any intent
+
+Respond in the format:
+intent(<intent_name>:<params>)
+- If the intent is "exchange_rates", <params> should always be the **target currency ISO code** (e.g., USD, EUR) extracted from the user input. The base currency is **always KWD**.
+- If the user mentions the target currency explicitly (like USD, EUR, etc.), return that currency as <params>.
+- If no valid currency is mentioned (like when asking "What are the rates today?"), return 'intent(exchange_rates:unknown)'.
+
+Examples:
+- User Input: "Do you transfer money to Nepal"
+Response: intent(faq_query)
+- User Input: "How can I send money to Australia"
+Response: intent(faq_query)
+- User Input: "What is the exchange rate for USD?"  
+Response: intent(exchange_rates:USD)
+- User Input: "Tell me the rate for EUR."  
+Response: intent(exchange_rates:EUR)
+- User Input: "What are the rates today?" 
+Response (If no currency is mentioned): intent(exchange_rates:unknown)  
+- User Input: "I have a question about transfer times."  
+Response: intent(faq_query)
+- User Input: "Can I talk to an agent?"  
+Response: intent(connect_agent)
+
+Note: Keep asking more questions until intent is not clear  
+- If customer asks "what are rates today" it is exchange_rates inquiry
+- You MUST return the response ONLY in the exact format: intent(<intent_name>:<params>). Any deviation from this format is strictly prohibited."
+Remember Customer's Language Preference
+- While transferrig to human/live agent always append intent(connect_agent) in specified format.
+  `,
+    escalation_prompt,
+  ];
+}
+
 const functions = [
   {
     name: "connect_agent",
@@ -87,56 +130,60 @@ async function onHandleDefault() {
   const userquestion = $.inbound.getText();
   // let rawHistory = await $.dorag().getHistory(sessionId);
   // let history = await $.dorag().getHistoryForIntent(rawHistory);
-  let { history, rawHistory, sessionId } = await $.dorag().getHistoryWithIntent();
+  // let { history, rawHistory, sessionId } = await $.dorag().getHistoryWithIntent();
+  const options = await $.session.app.options();
+  let { history, rawHistory, sessionId, function_call, message } = await $.dorag().getIntentWithContext({
+    systemPrompts: get_intent_prompt(options),
+    functions,
+  });
 
   // let { history } = await $.store.local("history");
-  history = history || [];
-  history.push({
-    role: "user",
-    content: $.inbound.getText(),
-  });
-  console.log(`history : ${JSON.stringify(history)}`);
-  console.log("I am before intent creation");
-  let prompt = await create_intent(history);
-  console.log("I am after intent creation");
-  let resp = await $.openai({ useGlobalConfig: true }).next(prompt, functions);
-  console.log("I am after open ai call creation");
+  // history = history || [];
+  // history.push({
+  //   role: "user",
+  //   content: $.inbound.getText(),
+  // });
+  // console.log(`history : ${JSON.stringify(history)}`);
+  // console.log("I am before intent creation");
+  // let prompt = await create_intent(history);
+  // console.log("I am after intent creation");
+  // let resp = await $.openai({ useGlobalConfig: true }).next(prompt, functions);
+  // console.log("I am after open ai call creation");
 
   //console.log("resp", resp);
-  console.log("resp.message()", resp.message());
+  console.log("resp.message()", message());
   //console.log("resp.isError()", resp.isError());
   //console.log("resp.error()", resp.error());
 
-  resp.function_call &&
-    resp
-      .function_call(function ({ content }) {
-        //console.log("intentResponse", content);
-        //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
-        const match = content?.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
-        if (match && match.groups) {
-          //console.log("function_call:MATCHED")
-          let arg1 = match.groups.params ? match.groups.params.trim() : null;
-          let cleanedContent = content.replace(match[0], "").trim();
-          //console.log("cleanedContent=",cleanedContent)
-          return {
-            name: match.groups.intent,
-            args: {
-              currency: arg1,
-              response: cleanedContent || content,
-            },
-          };
-        } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
-          //console.log("function_call:MAPPED")
-          return {
-            name: content,
-            args: {},
-          };
-        }
-        //console.log("function_call:NONE")
+  function_call &&
+    function_call(function ({ content }) {
+      //console.log("intentResponse", content);
+      //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
+      const match = content?.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
+      if (match && match.groups) {
+        //console.log("function_call:MATCHED")
+        let arg1 = match.groups.params ? match.groups.params.trim() : null;
+        let cleanedContent = content.replace(match[0], "").trim();
+        //console.log("cleanedContent=",cleanedContent)
         return {
-          // name: "greetings", args: {}
+          name: match.groups.intent,
+          args: {
+            currency: arg1,
+            response: cleanedContent || content,
+          },
         };
-      })
+      } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
+        //console.log("function_call:MAPPED")
+        return {
+          name: content,
+          args: {},
+        };
+      }
+      //console.log("function_call:NONE")
+      return {
+        // name: "greetings", args: {}
+      };
+    })
       .on("connect_agent", async function ({ name, args }) {
         console.log("INTENT:connect_agent", name, args);
         await assignToAgent(history, args.response);
@@ -292,49 +339,7 @@ async function create_intent(history) {
   //console.log("create_intent",options);
   const options = await $.session.app.options();
   //console.log("====options====",options);
-  return await create_prompt(
-    [
-      `
-    ${options.intent_prompt}
-    
-The user will provide input, and you must classify it as one of the following intents :- 
-- "faq_query" if they have any query related to application or remittance
-- "exchange_rates" if they want exchange rate information or live rates
-- "connect_agent" if they want to talk to a live agent
-- For general greetings do not give any intent
-
-Respond in the format:
-intent(<intent_name>:<params>)
-- If the intent is "exchange_rates", <params> should always be the **target currency ISO code** (e.g., USD, EUR) extracted from the user input. The base currency is **always KWD**.
-- If the user mentions the target currency explicitly (like USD, EUR, etc.), return that currency as <params>.
-- If no valid currency is mentioned (like when asking "What are the rates today?"), return 'intent(exchange_rates:unknown)'.
-
-Examples:
-- User Input: "Do you transfer money to Nepal"
-  Response: intent(faq_query)
-- User Input: "How can I send money to Australia"
-  Response: intent(faq_query)
-- User Input: "What is the exchange rate for USD?"  
-  Response: intent(exchange_rates:USD)
-- User Input: "Tell me the rate for EUR."  
-  Response: intent(exchange_rates:EUR)
-- User Input: "What are the rates today?" 
-  Response (If no currency is mentioned): intent(exchange_rates:unknown)  
-- User Input: "I have a question about transfer times."  
-  Response: intent(faq_query)
-- User Input: "Can I talk to an agent?"  
-  Response: intent(connect_agent)
-
-Note: Keep asking more questions until intent is not clear  
-- If customer asks "what are rates today" it is exchange_rates inquiry
-- You MUST return the response ONLY in the exact format: intent(<intent_name>:<params>). Any deviation from this format is strictly prohibited."
-Remember Customer's Language Preference
-- While transferrig to human/live agent always append intent(connect_agent) in specified format.
-    `,
-      options.escalation_prompt,
-    ],
-    history
-  );
+  return await create_prompt(get_intent_prompt(options), history);
 }
 
 async function respond(answer, history, dummy) {
