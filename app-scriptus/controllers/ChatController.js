@@ -1,6 +1,8 @@
 import { Controller, RequestMapping, ResponseBody, ResponseView } from "@bootloader/core/decorators";
 import { redis, RQueue, waitForReady } from "@bootloader/redison";
 
+const BotConsoleStore = require("../../@core/scriptus/store/BotConsoleStore");
+
 import InboundQueue from "../workers/InboundQueue";
 import crypto from "crypto";
 
@@ -46,6 +48,26 @@ export default class ChatController {
     });
 
     return {};
+  }
+
+  @RequestMapping({ path: "/api/console/logs", method: "get" })
+  @ResponseBody
+  async getConsoleLogs({
+    request: {
+      query: { app_id, contact_id, domain },
+    },
+  }) {
+    if (!contact_id) {
+      contact_id = cookies.contact_id;
+      app_id = LocalAdapeter.config.appId;
+      domain = LocalAdapeter.config.domain;
+    }
+
+    let logs = BotConsoleStore.get({ app_id, contact_id, domain });
+    return {
+      status: "SUCCESS",
+      results: logs,
+    };
   }
 
   @ResponseView

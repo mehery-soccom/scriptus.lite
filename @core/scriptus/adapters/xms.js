@@ -1,19 +1,14 @@
 const fetch = require("node-fetch");
 const config = require("@bootloader/config");
 const ajax = require("../../ajax");
-const { string } = require("../../utils");
-const { cachebox } = require("@bootloader/redison");
+const BotConsoleStore = require("../../scriptus/store/BotConsoleStore");
+
 const console = require("@bootloader/log4js").getLogger("XMSAdapeter");
 
 var secretKey = config.getIfPresent("mry.scriptus.secret");
 var scriptusServer = config.getIfPresent("mry.scriptus.server");
 
 var messageTypes = ["template", "audio", "document", "image", "location", "text", "video", "voice", "contacts"];
-
-const debuggerbox = cachebox({
-  name: "debugger",
-  ttl: 60 * 5,
-});
 
 function XMSAdapeter({ message: messageBody }) {
   let domain = messageBody.meta.domain;
@@ -29,10 +24,7 @@ function XMSAdapeter({ message: messageBody }) {
   };
 
   this.toContext = async function () {
-    let contactKey = string.toContactKey(contactId);
-    if (contactKey) {
-      toDebug = !!(await debuggerbox.get(contactKey));
-    }
+    toDebug = toDebug || BotConsoleStore.setDebugContact(contactId);
     var context = {
       meta: messageBody.meta,
       //Meta

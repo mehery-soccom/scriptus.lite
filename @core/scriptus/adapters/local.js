@@ -18,7 +18,7 @@ function LocalAdapeter({ message, contact_id, sessionId, appCode = scriptusQueue
       server: null,
       tnt: domain,
       domain: domain,
-      app_id: "0",
+      app_id: appCode,
       appCode: appCode,
       appType: "bot",
       //Contact
@@ -90,4 +90,11 @@ function LocalAdapeter({ message, contact_id, sessionId, appCode = scriptusQueue
     return {};
   };
 }
+
+LocalAdapeter.config = {
+  domain: scriptusDomain,
+  queue: scriptusQueue,
+  appId: scriptusQueue,
+  appCode: scriptusQueue,
+};
 module.exports = LocalAdapeter;
