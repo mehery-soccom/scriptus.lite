@@ -10,7 +10,7 @@ const debuggerbox = cachebox({
 
 module.exports = {
   async setDebugContact(contactId) {
-    let contactKey = utils.string.toContactKey(contactId);
+    let contactKey = string.toContactKey(contactId);
     await debuggerbox.set(contactKey, "DEBUG_ENABLED");
   },
   async isDebugContact(contactId) {
@@ -22,9 +22,12 @@ module.exports = {
   },
 
   async get({ app_id, contact_id, domain, tnt }) {
+    //console.log("GET LOGS FOR", contact_id, app_id, domain);
+    //await this.log({ app_id, contact_id, domain, tnt }, { level: "log", type: "info", logs: ["zzzz"] });
+
     let lastStamp = Date.now();
     let _domain = domain || tnt;
-    this.setDebugContact(contact_id);
+    await this.setDebugContact(contact_id);
 
     let BotConsoleLog = mongon.model(BotConsoleSchema, { domain: _domain });
     let docs = await BotConsoleLog.find({
@@ -36,6 +39,7 @@ module.exports = {
 
     docs.map(function (doc) {
       lastStamp = Math.max(doc.timestamp, lastStamp);
+      return doc;
     });
 
     BotConsoleLog.deleteMany(
@@ -57,7 +61,8 @@ module.exports = {
 
   async log({ app_id, contact_id, domain }, { level, type, logs }) {
     try {
-      let BotConsoleLog = mongon.model(BotConsoleSchema);
+      //console.log("SET LOGS FOR", contact_id, app_id, domain);
+      let BotConsoleLog = mongon.model(BotConsoleSchema, { domain });
       const botLog = new BotConsoleLog({
         domain: domain,
         app_id: app_id,
@@ -74,6 +79,7 @@ module.exports = {
           return _log;
         }),
       });
+      //console.log("SETTED LOGS FOR", contact_id, app_id, domain, botLog);
       return await botLog.save();
     } catch (e) {
       console.log("CONSOLE SAVE EXCEPTION", e);

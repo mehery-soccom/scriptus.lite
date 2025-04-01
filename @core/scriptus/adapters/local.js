@@ -5,7 +5,7 @@ var scriptusDomain = config.getIfPresent("mry.scriptus.domain");
 var scriptusQueue = config.getIfPresent("mry.scriptus.queue") || "my_bot";
 const SESSIONS = {};
 
-function LocalAdapeter({ message, contact_id, sessionId, appCode = scriptusQueue, domain = scriptusDomain }) {
+function LocalAdapter({ message, contact_id, sessionId, appCode = scriptusQueue, domain = scriptusDomain }) {
   //{ author: "Bot", type: "text", data: { text: `Response(${$.inbound.data.text})` }
 
   appCode = SESSIONS[sessionId] || appCode;
@@ -86,15 +86,15 @@ function LocalAdapeter({ message, contact_id, sessionId, appCode = scriptusQueue
 
   this.routeSession = function (options) {
     //scriptusQueue = options.queue;
-    SESSIONS[sessionId] = options.queue;
+    //SESSIONS[sessionId] = options.queue;
     return {};
   };
 }
 
-LocalAdapeter.config = {
+LocalAdapter.config = {
   domain: scriptusDomain,
   queue: scriptusQueue,
   appId: scriptusQueue,
   appCode: scriptusQueue,
 };
-module.exports = LocalAdapeter;
+module.exports = LocalAdapter;

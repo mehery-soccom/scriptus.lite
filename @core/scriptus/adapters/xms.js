@@ -24,7 +24,7 @@ function XMSAdapeter({ message: messageBody }) {
   };
 
   this.toContext = async function () {
-    toDebug = toDebug || BotConsoleStore.setDebugContact(contactId);
+    toDebug = toDebug || BotConsoleStore.isDebugContact(contactId);
     var context = {
       meta: messageBody.meta,
       //Meta

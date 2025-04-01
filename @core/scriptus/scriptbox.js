@@ -31,7 +31,7 @@ function ScriptBox({ name, name_fallback = [], code, load }) {
     if (code) {
       vmscript = new vm.Script(code);
     } else {
-      throw Error("Failed to load script", name);
+      throw Error(`Failed to load script ${name}`);
     }
     return script;
   })();
