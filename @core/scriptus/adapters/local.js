@@ -86,7 +86,7 @@ function LocalAdapter({ message, contact_id, sessionId, appCode = scriptusQueue,
 
   this.routeSession = function (options) {
     //scriptusQueue = options.queue;
-    //SESSIONS[sessionId] = options.queue;
+    SESSIONS[sessionId] = options.queue;
     return {};
   };
 }
