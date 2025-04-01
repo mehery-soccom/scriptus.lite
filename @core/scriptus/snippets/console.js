@@ -27,7 +27,7 @@ async function logger({ app_id, contact_id, domain }, { level, type, logs }) {
     });
     return await botLog.save();
   } catch (e) {
-    console.log("LOG SAVE EXCEPTION", e);
+    console.log("CONSOLE SAVE EXCEPTION", e);
   }
 }
 
