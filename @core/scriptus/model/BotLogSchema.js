@@ -2,7 +2,6 @@ const mongon = require("@bootloader/mongon");
 
 const schema = mongon.Schema(
   {
-    _id: true ,// Ensure _id is enabled
     tnt: { type: String, index: true },
     app_id: { type: String, index: true },
     api_key: String,
@@ -13,7 +12,7 @@ const schema = mongon.Schema(
     botFlow: Object,
     botFlowRenderer: Object,
   },
-  { minimize: false, collection: "AS_BOT_CODE" }
+  { minimize: false, collection: "AS_BOT_CODE", _id: true }
 );
 
 module.exports = schema;

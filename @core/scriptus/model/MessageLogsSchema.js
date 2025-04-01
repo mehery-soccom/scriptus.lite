@@ -2,7 +2,6 @@ const mongon = require("@bootloader/mongon");
 
 const schema = mongon.Schema(
   {
-    _id: true, // Ensure _id is enabled
     timestamp: { type: Number },
     sessionId: { type: String },
     type: { type: String, index: true },
@@ -19,7 +18,7 @@ const schema = mongon.Schema(
     queue: { type: String, index: true },
     logs: { type: [Object] },
   },
-  { minimize: false, collection: "MESSAGE_LOGS" }
+  { minimize: false, collection: "MESSAGE_LOGS", _id: true }
 );
 
 module.exports = schema;

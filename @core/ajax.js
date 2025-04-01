@@ -3,6 +3,8 @@ const fetch = require("node-fetch");
 const AbortController = globalThis.AbortController || require("abort-controller");
 const REQUEST_TIMOUT = 5000;
 
+const console = require("@bootloader/log4js").getLogger("ajax");
+
 function createTimeout(time) {
   const controller = new AbortController();
   controller.timeout = setTimeout(() => {
@@ -34,7 +36,8 @@ async function request(url, method, headers, body) {
     clearTimeout(timer.timeout);
     return response;
   } catch (error) {
-    console.error(`${method} Error:`, error);
+    console.log(`${method} Error:`, error);
+    //LOGGER.error(`${method} Error:`, error)
     throw error;
   }
 }
