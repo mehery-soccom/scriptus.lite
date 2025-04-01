@@ -127,33 +127,29 @@ async function onHandleDefault() {
   //console.log("onHandleDefault");
   const isOpenAi = true;
   // console.log(`message : ${JSON.stringify(inboundMessage)}`)
-  const userquestion = $.inbound.getText();
-  // let rawHistory = await $.dorag().getHistory(sessionId);
-  // let history = await $.dorag().getHistoryForIntent(rawHistory);
-  // let { history, rawHistory, sessionId } = await $.dorag().getHistoryWithIntent();
-  const options = await $.session.app.options();
-  let { history, rawHistory, sessionId, function_call, message } = await $.dorag().getIntentWithContext({
-    systemPrompts: get_intent_prompt(options),
+  const {
+    intent_prompt,
+    escalation_prompt,
+    bot_introduction,
+    no_info_response,
+    rephrasing_rules,
+    rephrasing_conflict_resolution_rules,
+    rephrasing_examples,
+    answer_llm,
+  } = await $.session.app.options();
+  let {
+    history,
+    rawHistory,
+    sessionId,
+    function_call,
+    message,
+    userText: userquestion,
+  } = await $.dorag().getIntentWithContext({
+    systemPrompts: get_intent_prompt({ intent_prompt, escalation_prompt }),
     functions,
   });
 
-  // let { history } = await $.store.local("history");
-  // history = history || [];
-  // history.push({
-  //   role: "user",
-  //   content: $.inbound.getText(),
-  // });
-  // console.log(`history : ${JSON.stringify(history)}`);
-  // console.log("I am before intent creation");
-  // let prompt = await create_intent(history);
-  // console.log("I am after intent creation");
-  // let resp = await $.openai({ useGlobalConfig: true }).next(prompt, functions);
-  // console.log("I am after open ai call creation");
-
-  //console.log("resp", resp);
   console.log("resp.message()", message());
-  //console.log("resp.isError()", resp.isError());
-  //console.log("resp.error()", resp.error());
 
   function_call &&
     function_call(function ({ content }) {
@@ -210,14 +206,6 @@ async function onHandleDefault() {
         await respond(text, history, true);
       })
       .on("*", async function ({ content }) {
-        const {
-          bot_introduction,
-          no_info_response,
-          rephrasing_rules,
-          rephrasing_conflict_resolution_rules,
-          rephrasing_examples,
-          answer_llm,
-        } = await $.session.app.options();
         console.log(`CONTENT : ${JSON.stringify(content)}`);
         console.log("INTENT:faq_query");
         console.log(`sessionId: ${sessionId}`);
@@ -256,64 +244,7 @@ async function onHandleDefault() {
         } else {
           await assignToAgent(history, answer.ans);
         }
-
-        // let resp = await $.reply(`${answer}`);
-        // const options = await $.session.app.options();
-        // console.log("code : options.knowbase", options.knowbase);
-        // let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
-        // let knowledgeBaseStr = knowledgeBase
-        //   .map(function (nb) {
-        //     return `
-        //     ${nb.title}
-        //     ${nb.content}
-        //   `;
-        //   })
-        //   .join("");
-        // //knowledgeBaseStr = "";
-        // // console.log("response.config", response.config)
-        // let prompt = await create_prompt(
-        //   [
-        //     `${options.knowbase_prompt}
-        //   ${knowledgeBaseStr}
-        //   `,
-        //   ],
-        //   history
-        // );
-        // let resp2 = await $.openai.next(prompt);
-        // //console.log("resp2.message()", resp2.message());
-        // await respond(resp2.message().content, history);
       })
-      // .on(async function ({ content  }) {
-      //   console.log("INTENT:DEFAULT");
-      //   const options = await $.session.app.options();
-      //   console.log("code : options.knowbase", options.knowbase);
-      //   let knowledgeBase = await $.master.knowbase({ code: options.knowbase });
-      //   let knowledgeBaseStr = knowledgeBase
-      //     .map(function (nb) {
-      //       return `
-      //         ${nb.title}
-      //         ${nb.content}
-      //       `;
-      //     })
-      //     .join("");
-      //   //knowledgeBaseStr = "";
-      //   // console.log("response.config", response.config)
-      //   let prompt = await create_prompt(
-      //     [
-      //       `${options.knowbase_prompt}
-      //       ${knowledgeBaseStr}
-      //       `,
-      //     ],
-      //     history
-      //   );
-      //   let resp2 = await $.openai.next(prompt);
-      //   //console.log("resp2.message()", resp2.message());
-      //   await respond(resp2.message().content, history);
-      // })
-      // .on("greetings", async function ({ name, args,content }) {
-      //   console.log("INTENT:greetings",args);
-      //   await respond(args.response || content, history);
-      // })
       .on(async function ({ content }) {
         console.log("INTENT:DEFAULT");
         await respond(content, history);
@@ -333,13 +264,6 @@ async function create_prompt(systemContents, history, instructions) {
   ];
   //console.log("x",x)
   return x;
-}
-
-async function create_intent(history) {
-  //console.log("create_intent",options);
-  const options = await $.session.app.options();
-  //console.log("====options====",options);
-  return await create_prompt(get_intent_prompt(options), history);
 }
 
 async function respond(answer, history, dummy) {
