@@ -100,7 +100,7 @@ module.exports = function (
                 let function_call = this.localChoice.function_call || this.message().function_call;
                 if (typeof funName == "string") {
                   if (!function_call) return this;
-                  const { name, args } = function_call;
+                  const { name, arguments: args } = function_call;
                   if (funName == name || (!this.function_call_used && funName == "*")) {
                     this.function_call_used = funName;
                     callback({

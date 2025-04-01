@@ -112,7 +112,7 @@ async function onHandleDefault() {
       .function_call(function ({ content }) {
         //console.log("intentResponse", content);
         //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
-        const match = content.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
+        const match = content?.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
         if (match && match.groups) {
           //console.log("MATCHED")
           let arg1 = match.groups.params ? match.groups.params.trim() : null;
@@ -388,7 +388,7 @@ async function assignToAgent(history, response) {
 }
 
 async function showExchangeRate(currency) {
-  //console.log("showExchangeRate", currency);
+  console.log("showExchangeRate", currency);
   try {
     if (currency)
       return await $.rest({

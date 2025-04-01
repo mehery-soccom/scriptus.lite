@@ -2,6 +2,7 @@ const mongon = require("@bootloader/mongon");
 
 const schema = mongon.Schema(
   {
+    _id: { type: mongon.Schema.Types.ObjectId, auto: true }, // Ensure `_id` is added
     tnt: { type: String, index: true },
     app_id: { type: String, index: true },
     api_key: String,
