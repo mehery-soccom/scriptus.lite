@@ -59,7 +59,8 @@ async function listenHandler() {
 async function onMessageReceive() {
   //return await onHandleDefault();
   let inputCode = ($.inbound.getCode() || "").toUpperCase();
-  //console.log("handleInput",inputCode);
+  $.logger.log("handleInput",inputCode);
+  $.console.log("handleInput",inputCode);
   switch (inputCode) {
     case "C":
     case "#":
