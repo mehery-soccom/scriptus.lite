@@ -130,10 +130,11 @@ async function getRecentWebChats(sessionId) {
         _id: 0,
       }
     )
-      .sort({ timestamp: 1 }) // Sort by most recent first
-      .limit(5); // Limit to 5 most recent chats
+      .sort({ timestamp: -1 }) // Sort by most recent first
+      .limit(5) // Limit to 5 most recent chats
 
-    return recentChats;
+    const sortedChats = recentChats.reverse();
+    return sortedChats;
   } catch (error) {
     console.error("Error retrieving recent web chats:", error);
     throw error; // Re-throw to allow caller to handle
