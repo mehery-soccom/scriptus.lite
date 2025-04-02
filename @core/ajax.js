@@ -2,7 +2,7 @@ const fetch = require("node-fetch");
 import ChainedPromise from "./lib/ChainedPromise";
 
 const AbortController = globalThis.AbortController || require("abort-controller");
-const REQUEST_TIMOUT = 50000;
+const REQUEST_TIMOUT = 8000;
 
 const console = require("@bootloader/log4js").getLogger("ajax");
 
