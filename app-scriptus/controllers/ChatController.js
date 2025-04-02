@@ -1,6 +1,7 @@
 import { Controller, RequestMapping, ResponseBody, ResponseView } from "@bootloader/core/decorators";
 import { redis, RQueue, waitForReady } from "@bootloader/redison";
 import { XMSAdapter, LocalAdapter } from "./../../@core/scriptus/adapters";
+const config = require("@bootloader/config");
 
 const BotConsoleStore = require("../../@core/scriptus/store/BotConsoleStore");
 
@@ -96,5 +97,22 @@ export default class ChatController {
   async resetSession({ response }) {
     response.clearCookie("contact_id"); // Removes 'session_token' cookie
     return {};
+  }
+
+  @ResponseBody
+  @RequestMapping({ path: "/api/session/webhook", method: "post" })
+  async setWebhook({ response }) {
+    let ngrokDomain = config.get("ngrok.domain");
+    return XMSAdapter.webhook({
+      url: `https://${ngrokDomain}/scriptus/api/message/inbound`,
+    });
+  }
+
+  @ResponseBody
+  @RequestMapping({ path: "/api/session/webhook", method: "delete" })
+  async resetWebhook({ response }) {
+    return XMSAdapter.webhook({
+      url: "",
+    });
   }
 }

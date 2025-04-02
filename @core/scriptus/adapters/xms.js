@@ -1,12 +1,16 @@
 const fetch = require("node-fetch");
 const config = require("@bootloader/config");
-const ajax = require("../../ajax");
+import ajax from "../../ajax";
 const BotConsoleStore = require("../../scriptus/store/BotConsoleStore");
 
 const console = require("@bootloader/log4js").getLogger("XMSAdapeter");
 
-var secretKey = config.getIfPresent("mry.scriptus.secret");
+var scriptusSecret = config.getIfPresent("mry.scriptus.secret");
+var scriptusId = config.getIfPresent("mry.scriptus.id");
+var scriptusKey = config.getIfPresent("mry.scriptus.key", "mry.scriptus.secret");
+var scriptusQueue = config.getIfPresent("mry.scriptus.queue");
 var scriptusServer = config.getIfPresent("mry.scriptus.server");
+var scriptusDomain = config.getIfPresent("mry.scriptus.domain");
 
 var messageTypes = ["template", "audio", "document", "image", "location", "text", "video", "voice", "contacts"];
 
@@ -19,7 +23,7 @@ function XMSAdapeter({ message: messageBody }) {
 
   var base_url = "https://" + domain + "." + server + "/xms";
   var headers = {
-    "x-api-key": secretKey,
+    "x-api-key": scriptusSecret,
     "x-api-id": appId,
   };
 
@@ -159,7 +163,7 @@ function XMSAdapeter({ message: messageBody }) {
     formData[options.type] = options[options.type];
     const url = `https://${messageBody.meta.domain}.${messageBody.meta.server}/xms/api/v1/message/send`;
     const headers = {
-      "x-api-key": secretKey,
+      "x-api-key": scriptusSecret,
       "x-api-id": messageBody.meta.appId,
       "Content-Type": "application/json",
       // 'Content-Type': 'application/x-www-form-urlencoded',
@@ -197,7 +201,7 @@ function XMSAdapeter({ message: messageBody }) {
   };
 
   this.closeSession = async function (options) {
-    return ajax({
+    return await ajax({
       url: base_url + "/api/v1/session/close",
       headers,
     })
@@ -205,4 +209,18 @@ function XMSAdapeter({ message: messageBody }) {
       .json();
   };
 }
+
+XMSAdapeter.webhook = async function (options) {
+  let apiUrl = "https://" + scriptusDomain + "." + scriptusServer + "/xms/api/v1/config/webhook";
+  return await ajax({
+    url: apiUrl,
+    headers: {
+      "x-api-key": scriptusKey,
+      "x-api-id": scriptusId,
+    },
+  })
+    .post(options)
+    .json();
+};
+
 module.exports = XMSAdapeter;
