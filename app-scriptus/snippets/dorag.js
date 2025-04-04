@@ -281,7 +281,7 @@ async function semanticSearch(embedding, output_fields, field_name, topK = 2, fi
   }
 }
 
-async function performRag(rephrasedQuestion) {
+async function performRag(rephrasedQuestion , tenant_partition_key) {
   try {
     // 1. Generate embedding for the user question
     let start = Date.now();
@@ -292,13 +292,13 @@ async function performRag(rephrasedQuestion) {
     // if in production
     // const park = context.getTenant();
     // else hard code it
-    const park = "almullaexchange";
+    // const park = "almullaexchange";
     const searchResults = await semanticSearch(
       questionEmbedding,
       ["knowledgebase"],
       "fast_dense_vector",
       2,
-      `tenant_partition_key == "${park}"`
+      `tenant_partition_key == "${tenant_partition_key}"`
     );
 
     // 3. Format results for passing to the fine-tuned model
@@ -414,7 +414,8 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
     }
     rag(rephrasedQuestion) {
       return this.chain(async function (parentResp) {
-        const topMatches = await performRag(rephrasedQuestion);
+        const tenant_partition_key = context.getTenant()
+        const topMatches = await performRag(rephrasedQuestion , tenant_partition_key);
         return topMatches;
       });
     }
@@ -428,7 +429,8 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
           rephrasingExamples,
         });
         console.log(`rephrased question : ${rephrasedQuestion}`);
-        const topMatches = await performRag(rephrasedQuestion);
+        const tenant_partition_key = context.getTenant()
+        const topMatches = await performRag(rephrasedQuestion , tenant_partition_key);
 
         let relevantInfo = "";
         const matches = [];
