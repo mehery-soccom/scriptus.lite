@@ -1,6 +1,9 @@
 const config = require("@bootloader/config");
 const log4js = require("@bootloader/log4js");
 const { requireOptional } = require("@bootloader/utils");
+
+const { Snippets } = require("../../@core/scriptus");
+
 import { Controller, RequestMapping, ResponseBody, ResponseView } from "@bootloader/core/decorators";
 
 var pjson = requireOptional(".../../../package.json|../../package.json|../package.json|./package.json");
@@ -33,6 +36,7 @@ export default class AppInfoController {
       UP_STAMP: UP_STAMP.toISOString(),
       build: bjson,
       node_version: process.version,
+      snippets: Snippets.listAll(),
     };
   }
 }
