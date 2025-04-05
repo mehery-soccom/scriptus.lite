@@ -234,6 +234,19 @@ async function initJobs({ name, path }) {
         }
       }
 
+      jobInstance.execute = async function (data, options = {}) {
+        await JobClass.execute(data, options);
+      };
+
+      jobInstance.run = async function (data, options = {}) {
+        await JobClass.run(data, options);
+      };
+
+      jobInstance.push = async function (data, options = {}) {
+        let queueName = `eq:app:*:topic:${job.meta.name}`;
+        await redis.lpush(queueName, JSON.stringify({ data, context: utils.context.toMap() })); // Non-Blocking call
+      };
+
       recoverJobs();
     }
   }
@@ -244,9 +257,10 @@ async function initQueues(app) {
   let client = await waitForReady();
   for (const { name, job } of Object.values(jobHolders)) {
     try {
-      if (typeof job.poll == "function") {
-        await executeOnQueue(app, name, job);
-        await executeOnQueue("*", name, job);
+      job.onPush = job.onPush || job.poll || job.push;
+      if (typeof job.onPush == "function") {
+        await executeOnPush(app, name, job);
+        await executeOnPush("*", name, job);
       }
     } catch (error) {
       coreutils.error("Queue processing error:", error);
@@ -255,7 +269,7 @@ async function initQueues(app) {
   setTimeout(() => initQueues(app), 1000);
 }
 
-async function executeOnQueue(app, topic, job) {
+async function executeOnPush(app, topic, job) {
   let queueName = `eq:app:${app}:topic:${topic}`;
   const message = await redis.rpop(queueName); // Non-Blocking call
   if (message) {
