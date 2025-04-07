@@ -39,7 +39,8 @@ async function information_not_available() {
 
 async function getModelResponse(context) {
   let start = Date.now();
-  const systemPrompt = `${context.botIntroduction}
+  const botIntro = context.botIntroduction || "You are a AI assistant. \nUse the provided information to answer the user's question."
+  const systemPrompt = `${botIntro}
 - If the retrieved information contains an answer that matches the meaning of the user's question, respond using that information.  
 - If the wording differs but the meaning is the same, still answer using the retrieved data.  
 - If no relevant information is found, trigger information_not_available() function provided as a tool.  
@@ -61,7 +62,7 @@ Answer the user's question using **the most relevant retrieved information from 
   let service = new OpenAIService({ useGlobalConfig: true });
   let { client: openai, config } = await service.init();
   const completion = await openai.chat.completions.create({
-    model: context.model,
+    model: context.model || "gpt-4o-mini",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -89,7 +90,7 @@ Answer the user's question using **the most relevant retrieved information from 
 
   if (completion.choices[0].message.content === null) {
     const answer = {
-      ans: context.noInfoResponse,
+      ans: context.noInfoResponse || "I dont have relevant information to your question available. Transfering to a agent for better understanding of your question.",
       valid: false,
     };
     console.log(completion.usage);
@@ -193,13 +194,15 @@ async function rephraseWithContext(context) {
     if (context.rawHistory.length === 0) return context.currentQuestion;
     // Format chat history as string
     const chatHistoryString = formatChatHistory(context.rawHistory);
-
+    const rephrasingRulesFinal = context.rephrasingRules || `- Never hallucinate or assume context beyond chat history. `
+    const rephrasingContextResolutionRules = context.rephrasingConflict || `If chat history has conflicting context. Always prefer latest context.
+    If chat history and Current User Question has conflicting context. Always prefer Current User Question.`
     const systemPrompt = `Your task is to rephrase the user's current question in a context-aware manner using the provided chat history.  
     ### **Rephrasing Rules:**
-    ${context.rephrasingRules}
+    ${rephrasingRulesFinal}
     
     ### **Conflict Resolution:** 
-    ${context.rephrasingConflict}
+    ${rephrasingContextResolutionRules}
 
     ### **Examples:**  
     #### Correct Behavior:
@@ -429,7 +432,8 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
           rephrasingExamples,
         });
         console.log(`rephrased question : ${rephrasedQuestion}`);
-        const tenant_partition_key = context.getTenant()
+        // const tenant_partition_key = context.getTenant()
+        const tenant_partition_key = "almullaexchange";
         const topMatches = await performRag(rephrasedQuestion , tenant_partition_key);
 
         let relevantInfo = "";

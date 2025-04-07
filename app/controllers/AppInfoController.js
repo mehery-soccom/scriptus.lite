@@ -1,6 +1,8 @@
 const config = require("@bootloader/config");
 const log4js = require("@bootloader/log4js");
 const { requireOptional } = require("@bootloader/utils");
+const mongonPing = require("@bootloader/mongon/ping");
+const redisonPing = require("@bootloader/redison/ping");
 
 const { Snippets } = require("../../@core/scriptus");
 
@@ -38,5 +40,23 @@ export default class AppInfoController {
       node_version: process.version,
       snippets: Snippets.listAll(),
     };
+  }
+
+  @ResponseBody
+  @RequestMapping({ path: "/mongo", method: "get" })
+  async getMongoInfo() {
+    LOGGER.info("getMongoInfo");
+    let resp = {};
+    resp.mongon = await mongonPing.push();
+    return resp;
+  }
+
+  @ResponseBody
+  @RequestMapping({ path: "/redis", method: "get" })
+  async getRedisInfo() {
+    LOGGER.info("getRedisInfo");
+    let resp = {};
+    resp.redisson = await redisonPing.get({ domain: "domain", type: "type", key: "key" });
+    return resp;
   }
 }
