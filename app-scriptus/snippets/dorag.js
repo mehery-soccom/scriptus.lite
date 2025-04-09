@@ -7,8 +7,11 @@ import { MetricType } from "@zilliz/milvus2-sdk-node";
 import { getExeTime } from "../../@core/utils/exetime";
 import mongon from "@bootloader/mongon";
 import { context } from "@bootloader/utils";
+import config from "@bootloader/config";
 import { raw } from "body-parser";
 const OpenAIService = require("../../@core/scriptus/clients/OpenAIService");
+
+const MRY_SCRIPTUS_DOMAIN = config.getIfPresent("mry.scriptus.domain"); // Replace with your actual tenant partition key
 
 async function generateEmbeddingOpenAi(text, dims = 512) {
   try {
@@ -433,7 +436,7 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
         });
         console.log(`rephrased question : ${rephrasedQuestion}`);
         // const tenant_partition_key = context.getTenant()
-        const tenant_partition_key = "almullaexchange";
+        const tenant_partition_key = MRY_SCRIPTUS_DOMAIN || context.getTenant();
         const topMatches = await performRag(rephrasedQuestion , tenant_partition_key);
 
         let relevantInfo = "";
