@@ -1,20 +1,25 @@
 var apiEndPoint = "https://apid-kwt.amxremit.com/bot/ext";
 
-function get_intent_prompt({ intent_prompt, escalation_prompt }) {
+function get_intent_prompt() {
   return [
-    `
-  ${intent_prompt}
-  
+    `You are Customer Support Agent for a money exchange or remittance company named Al Mulla Exchange, based in Kuwait and involved in international money transfer.
+    You will not refer to Al Mulla Exchange as a third person in a conversation. You can strictly do below activities:
+- Only answer customer queries about international money remittances based on the provided knowledge base and as per the knowledgebase prompt. 
+If information about money transfers to any specific country, country and currency combination, or country - currency - payout combination is not available in the knowledgebase, explicitly state that the particular combination is not available. 
+Do **not** assume or infer details. Do not provide responses for countries, for which remittances are not stated as available in the knowledgebase
+- Answer Customer queries related to live exchange rates, only if the customer explicitly asks for the exchange rate and not just the mere mention of a currency.
+- Transfer to a human agent only if the customer explicitly asks for it, when customer uploads any file, if the customer is being abusive, or if their request cannot be handled using the available knowledge base.
 The user will provide input, and you must classify it as one of the following intents :- 
-- "faq_query" if they have any query related to application or remittance
-- "exchange_rates" if they want exchange rate information or live rates
+- "faq_query" if they have any query on international money transfers (remittance), originating from Kuwait
+- "exchange_rates" if they specifically ask for exchange rate
 - "connect_agent" if they want to talk to a live agent
 - For general greetings do not give any intent
 
 Respond in the format:
 intent(<intent_name>:<params>)
-- If the intent is "exchange_rates", <params> should always be the **target currency ISO code** (e.g., USD, EUR) extracted from the user input. The base currency is **always KWD**.
+- If the intent is ONLY “exchange_rates", <params> should always be the **target currency ISO code** (e.g., USD, EUR) extracted from the user input. The base currency is **always KWD**.
 - If the user mentions the target currency explicitly (like USD, EUR, etc.), return that currency as <params>.
+- If the user mentions currency and country return: intent(faq_query)
 - If no valid currency is mentioned (like when asking "What are the rates today?"), return 'intent(exchange_rates:unknown)'.
 
 Examples:
@@ -32,14 +37,14 @@ Response (If no currency is mentioned): intent(exchange_rates:unknown)
 Response: intent(faq_query)
 - User Input: "Can I talk to an agent?"  
 Response: intent(connect_agent)
+- User Input: “Do you transfer (or remit) USD to Afghanistan?”
+Response: intent(faq_query)
 
 Note: Keep asking more questions until intent is not clear  
 - If customer asks "what are rates today" it is exchange_rates inquiry
 - You MUST return the response ONLY in the exact format: intent(<intent_name>:<params>). Any deviation from this format is strictly prohibited."
 Remember Customer's Language Preference
-- While transferrig to human/live agent always append intent(connect_agent) in specified format.
-  `,
-    escalation_prompt,
+- While transferrig to human/live agent always append intent(connect_agent) in specified format.`
   ];
 }
 
@@ -128,14 +133,14 @@ async function onHandleDefault() {
   const isOpenAi = true;
   // console.log(`message : ${JSON.stringify(inboundMessage)}`)
   const {
-    intent_prompt,
-    escalation_prompt,
     bot_introduction,
     no_info_response,
     rephrasing_rules,
     rephrasing_conflict_resolution_rules,
     rephrasing_examples,
     answer_llm,
+    answer_llm_system_prompt_temp,
+    answer_llm_user_prompt_temp
   } = await $.session.app.options();
   let {
     history,
@@ -145,7 +150,7 @@ async function onHandleDefault() {
     message,
     userText: userquestion,
   } = await $.dorag().getIntentWithContext({
-    systemPrompts: get_intent_prompt({ intent_prompt, escalation_prompt }),
+    systemPrompts: get_intent_prompt(),
     functions,
   });
 
@@ -153,7 +158,7 @@ async function onHandleDefault() {
 
   function_call &&
     function_call(function ({ content }) {
-      //console.log("intentResponse", content);
+      console.log("intentResponse", content);
       //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
       const match = content?.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
       if (match && match.groups) {
@@ -221,11 +226,15 @@ async function onHandleDefault() {
           rephrasingExamples: rephrasing_examples,
         });
         console.log(`relevant info : ${relevantInfo}`);
+        const sys_prompt = answer_llm_system_prompt_temp;
+        const user_prompt = answer_llm_user_prompt_temp;
         const answer = await $.dorag().askllm({
           botIntroduction: bot_introduction,
           relevantInfo,
           rephrasedQuestion,
           noInfoResponse: no_info_response,
+          sys_prompt,
+          user_prompt,
           model: answer_llm,
         });
         const convo = {
@@ -247,6 +256,16 @@ async function onHandleDefault() {
       })
       .on(async function ({ content }) {
         console.log("INTENT:DEFAULT");
+        console.log(`default content : ${JSON.stringify(content)}`);
+        const convo = {
+          sessionId,
+          rephrasedQuestion : userquestion,
+          messages : {
+            user : userquestion,
+            assistant : content
+          }
+        }
+        const savedChat = await $.dorag().saveConvo(convo);
         await respond(content, history);
       });
 }

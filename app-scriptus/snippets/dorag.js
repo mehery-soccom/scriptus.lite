@@ -43,25 +43,43 @@ async function information_not_available() {
 async function getModelResponse(context) {
   let start = Date.now();
   const botIntro = context.botIntroduction || "You are a AI assistant. \nUse the provided information to answer the user's question."
-  const systemPrompt = `${botIntro}
-- If the retrieved information contains an answer that matches the meaning of the user's question, respond using that information.  
-- If the wording differs but the meaning is the same, still answer using the retrieved data.  
-- If no relevant information is found, trigger information_not_available() function provided as a tool.  
-- Do not require an exact wording match to provide an answer.  
-- Do not omit any information while answering.
-Never invent information. Prioritize using retrieved knowledge.`;
-  const userPrompt = `
-### Relevant Information
+//   const systemPrompt = `${botIntro}
+// - If the retrieved information contains an answer that matches the meaning of the user's question, respond using that information.  
+// - If the wording differs but the meaning is the same, still answer using the retrieved data.  
+// - If no relevant information is found, trigger information_not_available() function provided as a tool.  
+// - Do not require an exact wording match to provide an answer.  
+// - Do not omit any information while answering.
+// Never invent information. Prioritize using retrieved knowledge.`;
+const system_prompt = context.sys_prompt || `You will be given a list of question and answers pairs in relevant docs section. Also a user question.
+Based on the relevant docs answer users question.
+Verify your answers are correct before answering.
+Dont omit any facts from relevant docs.
+Never invent information. Prioritize using relevant information.`
+const systemPrompt = `${botIntro}
+${system_prompt}`;
+
+//   const userPrompt = `
+// ### Relevant Information
+// ${context.relevantInfo}
+
+// ### User Question
+// ${context.rephrasedQuestion}
+
+// Answer the user's question using **the most relevant retrieved information from the Relevant Information above**.  
+// - If a retrieved FAQ answers the question (even if wording differs), provide that answer.  
+// - If no relevant information is found, trigger 'information_not_available()' function provided as tool.`;
+const user_prompt_part3 = context.user_prompt || `Answer the user's question using **the most relevant retrieved information from the Relevant Information above**.  
+- If a retrieved FAQ answers the question (even if wording differs), provide that answer.  
+- If no relevant information is found, trigger 'information_not_available()' function provided as tool.`;
+const userPrompt = 
+`### Relevant Information
 ${context.relevantInfo}
 
 ### User Question
 ${context.rephrasedQuestion}
-
-Answer the user's question using **the most relevant retrieved information from the Relevant Information above**.  
-- If a retrieved FAQ answers the question (even if wording differs), provide that answer.  
-- If no relevant information is found, trigger 'information_not_available()' function provided as tool.`;
-  // console.log(`SYStem prompt : ${systemPrompt}`);
-  console.log(`user prompt  : ${userPrompt}`);
+${user_prompt_part3}`
+  console.log(`relevant docs : ${context.relevantInfo}`);
+  console.log(`user qts (rephrased)  : ${context.rephrasedQuestion}`);
   let service = new OpenAIService({ useGlobalConfig: true });
   let { client: openai, config } = await service.init();
   const completion = await openai.chat.completions.create({
@@ -451,7 +469,7 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
         return { rephrasedQuestion, relevantInfo, matches };
       });
     }
-    askllm({ botIntroduction, relevantInfo, rephrasedQuestion, noInfoResponse, model }) {
+    askllm({ botIntroduction, relevantInfo, rephrasedQuestion, noInfoResponse, sys_prompt, user_prompt, model }) {
       return this.chain(async function (parentResp) {
         const answer = await getModelResponse({
           relevantInfo: relevantInfo,
@@ -459,6 +477,8 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
           botIntroduction: botIntroduction,
           model: model,
           noInfoResponse: noInfoResponse || information_not_available(),
+          sys_prompt : sys_prompt,
+          user_prompt : user_prompt
         });
         return answer;
       });
