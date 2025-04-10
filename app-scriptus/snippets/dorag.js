@@ -80,6 +80,8 @@ ${context.rephrasedQuestion}
 ${user_prompt_part3}`
   console.log(`relevant docs : ${context.relevantInfo}`);
   console.log(`user qts (rephrased)  : ${context.rephrasedQuestion}`);
+  // console.log(`system : ${systemPrompt}`);
+  // console.log(`user : ${userPrompt}`);
   let service = new OpenAIService({ useGlobalConfig: true });
   let { client: openai, config } = await service.init();
   const completion = await openai.chat.completions.create({

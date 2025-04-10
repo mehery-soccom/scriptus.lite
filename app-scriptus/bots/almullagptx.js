@@ -138,9 +138,7 @@ async function onHandleDefault() {
     rephrasing_rules,
     rephrasing_conflict_resolution_rules,
     rephrasing_examples,
-    answer_llm,
-    answer_llm_system_prompt_temp,
-    answer_llm_user_prompt_temp
+    answer_llm
   } = await $.session.app.options();
   let {
     history,
@@ -226,8 +224,21 @@ async function onHandleDefault() {
           rephrasingExamples: rephrasing_examples,
         });
         console.log(`relevant info : ${relevantInfo}`);
-        const sys_prompt = answer_llm_system_prompt_temp;
-        const user_prompt = answer_llm_user_prompt_temp;
+        
+        const sys_prompt = 
+`- If the retrieved information contains an answer that directly or indirectly addresses the user's question, respond using that information.
+- This includes cases where the information implies a negative answer (e.g., if a currency is not listed as available for a country, answer that it's not available).
+- Compare lists carefully - if a user asks if X is possible and X is not in the list of possibilities, answer "no" based on the retrieved data.
+- If no relevant information is found to either confirm or deny the user's question, trigger information_not_available() function provided as a tool.
+- Do not require an exact wording match to provide an answer.
+- Do not omit any information while answering.
+Never invent information. Prioritize using retrieved knowledge.`;
+        const user_prompt = 
+`Answer the user's question using the most relevant retrieved information from the Relevant Information above.
+- If a retrieved FAQ directly answers the question, provide that answer.
+- If the information implies a negative answer (e.g., a currency not being in a list of supported currencies for a country means it's not supported), clearly state this negative conclusion.
+- When comparing lists, be thorough - if something is not in a list where it would be if it were allowed/supported, conclude it's not allowed/supported.
+- If no information can be found that either confirms or denies the user's question, trigger 'information_not_available()' function provided as tool.`;
         const answer = await $.dorag().askllm({
           botIntroduction: bot_introduction,
           relevantInfo,
