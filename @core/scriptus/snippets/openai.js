@@ -9,6 +9,9 @@ module.exports = function (
 ) {
   function openai(_options = {}) {
     let options = typeof _options == "string" ? { key: _options } : _options || {};
+    if(options.parameters === undefined){
+      options.parameters = {}
+    }
     let openAIService = new OpenAIService({ domain, domainbox, ...options });
 
     return {
@@ -20,6 +23,10 @@ module.exports = function (
           provider: "AZURE",
         });
         //console.log("doc===",_options,"====",doc)
+        console.log(`a : ${JSON.stringify({
+          model: config?.model,
+          ...a,
+        })}`);
         if (!client) {
           throw "Error ( No OpenAI Provider )";
         }
@@ -46,6 +53,7 @@ module.exports = function (
       },
       async next(messages, functions) {
         try {
+          
           let response = await this.chat_completions_create({
             messages: (
               messages || [
@@ -61,6 +69,7 @@ module.exports = function (
             temperature: 1,
             frequency_penalty: 0,
             presence_penalty: 0,
+            ...options.parameters
           });
 
           //console.log("response:",response)
