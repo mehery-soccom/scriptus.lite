@@ -2,49 +2,72 @@ var apiEndPoint = "https://apid-kwt.amxremit.com/bot/ext";
 
 function get_intent_prompt() {
   return [
-    `You are Customer Support Agent for a money exchange or remittance company named Al Mulla Exchange, based in Kuwait and involved in international money transfer.
-    You will not refer to Al Mulla Exchange as a third person in a conversation. You can strictly do below activities:
-- Only answer customer queries about international money remittances based on the provided knowledge base and as per the knowledgebase prompt. 
-If information about money transfers to any specific country, country and currency combination, or country - currency - payout combination is not available in the knowledgebase, explicitly state that the particular combination is not available. 
-Do **not** assume or infer details. Do not provide responses for countries, for which remittances are not stated as available in the knowledgebase
-- Answer Customer queries related to live exchange rates, only if the customer explicitly asks for the exchange rate and not just the mere mention of a currency.
-- Transfer to a human agent only if the customer explicitly asks for it, when customer uploads any file, if the customer is being abusive, or if their request cannot be handled using the available knowledge base.
-The user will provide input, and you must classify it as one of the following intents :- 
-- "faq_query" if they have any query on international money transfers (remittance), originating from Kuwait
-- "exchange_rates" if they specifically ask for exchange rate
-- "connect_agent" if they want to talk to a live agent
-- For general greetings do not give any intent
+    `You are a Customer Support Assistant for al mulla exchange that handles faq queries about international money transfers (remittance) originateing from Kuwait,
+exchange rate queries, greeting and connect to agent requests. 
+** Your current task : **
+You MUST classify the user input into one of the following categories and respond **only** in the exact format:  
+intent(<intent_name>:<params>)  
+Any deviation from this format is strictly prohibited. Based in the guidelines, examples and instructions provided below.
 
-Respond in the format:
-intent(<intent_name>:<params>)
-- If the intent is ONLY “exchange_rates", <params> should always be the **target currency ISO code** (e.g., USD, EUR) extracted from the user input. The base currency is **always KWD**.
-- If the user mentions the target currency explicitly (like USD, EUR, etc.), return that currency as <params>.
-- If the user mentions currency and country return: intent(faq_query)
-- If no valid currency is mentioned (like when asking "What are the rates today?"), return 'intent(exchange_rates:unknown)'.
+The possible intents are:
+
+1. **faq_query**  
+- If the user's query is about international money transfers (remittance), including queries about sending money to a specific country, a country-currency combination, or payout details.  
+- These will be handled by a RAG system, so your job is only to return the intent.
+
+2. **exchange_rates**  
+- If the user explicitly asks for exchange rates (e.g., “What is the exchange rate for USD?”).  
+- Do NOT classify as "exchange_rates" if the user only mentions a currency without explicitly asking for the rate.  
+- The <params> must be the **target currency ISO code** (e.g., USD, EUR).  
+- If the currency is not mentioned, use: "intent(exchange_rates:unknown)".  
+- The base currency is always KWD.
+
+3. **connect_agent**  
+- Use this intent if the user explicitly asks to speak to a human/live agent, uploads a file, or if the user is abusive or their request cannot be fulfilled via the system.
+
+4. **greeting**  
+- For greetings like "hi", "hello", "how are you", return:  
+  "intent(greeting:how can I help you?)"  
+- For questions like "what can you do?" or "who are you?", return:  
+  "intent(greeting:I am an assistant that helps you with international money transfers and exchange rates for Al Mulla Exchange.)"  
+- For other greetings or introductory messages, choose an appropriate helpful response.  
+  The format must be: "intent(greeting:<appropriate message>)"
+
+5. **No Intent**  
+- If none of the above categories match, return nothing. Do not invent or assume intent.
+
+---
 
 Examples:
-- User Input: "Do you transfer money to Nepal"
-Response: intent(faq_query)
-- User Input: "How can I send money to Australia"
-Response: intent(faq_query)
-- User Input: "What is the exchange rate for USD?"  
-Response: intent(exchange_rates:USD)
-- User Input: "Tell me the rate for EUR."  
-Response: intent(exchange_rates:EUR)
-- User Input: "What are the rates today?" 
-Response (If no currency is mentioned): intent(exchange_rates:unknown)  
-- User Input: "I have a question about transfer times."  
-Response: intent(faq_query)
-- User Input: "Can I talk to an agent?"  
-Response: intent(connect_agent)
-- User Input: “Do you transfer (or remit) USD to Afghanistan?”
-Response: intent(faq_query)
 
-Note: Keep asking more questions until intent is not clear  
-- If customer asks "what are rates today" it is exchange_rates inquiry
-- You MUST return the response ONLY in the exact format: intent(<intent_name>:<params>). Any deviation from this format is strictly prohibited."
-Remember Customer's Language Preference
-- While transferrig to human/live agent always append intent(connect_agent) in specified format.`
+- User Input: "Do you transfer money to Nepal?"  
+  Response: intent(faq_query)
+
+- User Input: "What is the exchange rate for USD?"  
+  Response: intent(exchange_rates:USD)
+
+- User Input: "Can I speak to a human?"  
+  Response: intent(connect_agent)
+
+- User Input: "Hi"  
+  Response: intent(greeting:how can I help you?)
+
+- User Input: "What can you do?"  
+  Response: intent(greeting:I am an assistant that helps you with international money transfers and exchange rates for Al Mulla Exchange.)
+
+- User Input: "Do you transfer EUR to Canada?"  
+  Response: intent(faq_query)
+
+- User Input: "What are the rates today?"  
+  Response: intent(exchange_rates:unknown)
+
+---
+
+IMPORTANT RULES:
+- Do not refer to Al Mulla Exchange in third person.
+- Do not assume or infer any remittance availability — that will be handled by the retrieval system.
+- Only return a single line in the required format. No explanations or extra text.
+- Keep asking follow-up questions **only if** the intent is unclear AND no intent has been returned yet.`
   ];
 }
 
@@ -55,6 +78,19 @@ const functions = [
     parameters: {
       type: "object",
       properties: {},
+    },
+  },
+  {
+    name: "greeting",
+    description: "Respond to a greeting message from user",
+    parameters: {
+      type: "object",
+      properties: {
+        currency: {
+          type: "string",
+          description: "Appropriate response to users greeting",
+        },
+      },
     },
   },
   {
@@ -160,10 +196,13 @@ async function onHandleDefault() {
       //const match = content.match(/intent\((?<intent>\w+)(:(?<params>[\w\d]+))?\)/i);
       const match = content?.match(/intent\((?<intent>\w+)(:(?<params>.+?))?\)/);
       if (match && match.groups) {
-        //console.log("function_call:MATCHED")
+        console.log("function_call:MATCHED")
         let arg1 = match.groups.params ? match.groups.params.trim() : null;
         let cleanedContent = content.replace(match[0], "").trim();
         //console.log("cleanedContent=",cleanedContent)
+        console.log(`matched name : ${match.groups.intent}`);
+        console.log(`matched response : ${cleanedContent || content}`);
+        console.log(`matched arg1 : ${arg1}`);
         return {
           name: match.groups.intent,
           args: {
@@ -171,21 +210,35 @@ async function onHandleDefault() {
             response: cleanedContent || content,
           },
         };
-      } else if (["faq_query", "exchange_rates", "connect_agent"].indexOf(content) > -1) {
-        //console.log("function_call:MAPPED")
+      } else if (["faq_query", "exchange_rates", "connect_agent", "greeting"].indexOf(content) > -1) {
+        console.log("function_call:MAPPED")
         return {
           name: content,
           args: {},
         };
       }
-      //console.log("function_call:NONE")
+      console.log("function_call:NONE")
       return {
         // name: "greetings", args: {}
       };
     })
+      .on("greeting", async function ( { name , args } ) {
+        console.log("INTENT:greeting", name, args);
+        const convo = {
+          sessionId,
+          rephrasedQuestion : userquestion,
+          messages : {
+            user : userquestion,
+            assistant : args.currency
+          }
+        }
+        const savedChat = await $.dorag().saveConvo(convo);
+        await respond(args.currency, history); 
+      } )
       .on("connect_agent", async function ({ name, args }) {
         console.log("INTENT:connect_agent", name, args);
-        await assignToAgent(history, args.response);
+        const willing_fileUpload_or_abusive_connect_agent = `We are transfering to a agent as per your request. Please be patient`
+        await assignToAgent(history, willing_fileUpload_or_abusive_connect_agent);
       })
       .on("exchange_rates", async function ({ name, args }) {
         console.log("INTENT:exchange_rates", name, args);
@@ -204,7 +257,6 @@ async function onHandleDefault() {
             assistant: text,
           },
         };
-
         const savedChat = await $.dorag().saveConvo(convo);
         await respond(text, history, true);
       })
@@ -227,7 +279,8 @@ async function onHandleDefault() {
         
         const sys_prompt = 
 `- If the retrieved information contains an answer that directly or indirectly addresses the user's question, respond using that information.
-- This includes cases where the information implies a negative answer (e.g., if a currency is not listed as available for a country, answer that it's not available).
+- This includes cases where the information implies a negative answer (e.g., if a currency, channel of transfer or service is not listed as available for a country, 
+answer that it's not available).
 - Compare lists carefully - if a user asks if X is possible and X is not in the list of possibilities, answer "no" based on the retrieved data.
 - If no relevant information is found to either confirm or deny the user's question, trigger information_not_available() function provided as a tool.
 - Do not require an exact wording match to provide an answer.
@@ -236,7 +289,8 @@ Never invent information. Prioritize using retrieved knowledge.`;
         const user_prompt = 
 `Answer the user's question using the most relevant retrieved information from the Relevant Information above.
 - If a retrieved FAQ directly answers the question, provide that answer.
-- If the information implies a negative answer (e.g., a currency not being in a list of supported currencies for a country means it's not supported), clearly state this negative conclusion.
+- If the information implies a negative answer (e.g. a currency, channel of transfer, service not being in a list of supported currencies, channels of transfer, services for a country means 
+it's not supported), clearly state this negative conclusion.
 - When comparing lists, be thorough - if something is not in a list where it would be if it were allowed/supported, conclude it's not allowed/supported.
 - If no information can be found that either confirms or denies the user's question, trigger 'information_not_available()' function provided as tool.`;
         const answer = await $.dorag().askllm({
@@ -268,16 +322,19 @@ Never invent information. Prioritize using retrieved knowledge.`;
       .on(async function ({ content }) {
         console.log("INTENT:DEFAULT");
         console.log(`default content : ${JSON.stringify(content)}`);
+        const default_case_response = `I am a Customer Support Assistant for al mulla exchange that handles faq queries about international money transfers (remittance) originateing from Kuwait, 
+exchange rate queries, greeting and connect to agent requests.
+How may I help you ?`
         const convo = {
           sessionId,
           rephrasedQuestion : userquestion,
           messages : {
             user : userquestion,
-            assistant : content
+            assistant : default_case_response
           }
         }
         const savedChat = await $.dorag().saveConvo(convo);
-        await respond(content, history);
+        await respond(default_case_response, history);
       });
 }
 

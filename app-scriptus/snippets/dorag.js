@@ -405,7 +405,7 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
           conversations: history,
           instructions: instructions,
         });
-        let resp = await $.openai({ useGlobalConfig: true , parameters : { model : "gpt-4o-mini" , temperature : 0 , max_tokens : 600 }}).next(prompt, functions);
+        let resp = await $.openai({ useGlobalConfig: true , parameters : { model : "gpt-4o-mini" , temperature : 0 , max_tokens : 300 }}).next(prompt, functions);
         return {
           history,
           rawHistory,
