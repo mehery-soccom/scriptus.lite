@@ -23,10 +23,6 @@ module.exports = function (
           provider: "AZURE",
         });
         //console.log("doc===",_options,"====",doc)
-        console.log(`a : ${JSON.stringify({
-          model: config?.model,
-          ...a,
-        })}`);
         if (!client) {
           throw "Error ( No OpenAI Provider )";
         }
