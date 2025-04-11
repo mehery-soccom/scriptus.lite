@@ -222,7 +222,7 @@ async function rephraseWithContext(context) {
     If chat history and Current User Question has conflicting context. Always prefer Current User Question.`
     const systemPrompt = `Your task is to rephrase the user's current question in a context-aware manner using the provided chat history.  
     In "Chat History" Section conversations are ordered in cronological order.
-    Conversation 1 has happened at the earliest and the hight the conversation number more recent it will be.
+    Conversation 1 has happened at the earliest and the higher the conversation number more recent the conversation will be.
     ### **Rephrasing Rules:**
     ${rephrasingRulesFinal}
     
@@ -242,7 +242,7 @@ Rephrase the user's question using the provided context.
 
 - Prioritize user intent and clarity while ensuring the question remains concise.  
 - Avoid fabricating information or assuming context where none exists.`;
-    console.log(`rephrase system prompt : ${systemPrompt}`);
+    // console.log(`rephrase system prompt : ${systemPrompt}`);
     console.log(`rephrase user prompt : ${userPrompt}`);
     // Make API call to OpenAI
     let service = new OpenAIService({ useGlobalConfig: true });
