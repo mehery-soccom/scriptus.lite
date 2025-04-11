@@ -26,7 +26,7 @@
     "@bootloader/local": "^1.0.0",
     "@bootloader/log4js": "^1.0.5",
     "@bootloader/mongon": "^1.1.13",
-    "@bootloader/redison": "^1.1.11",
+    "@bootloader/redison": "^1.1.12",
     "@bootloader/utils": "^1.0.13",
     "@huggingface/transformers": "^3.4.0",
     "@langchain/community": "^0.3.36",
