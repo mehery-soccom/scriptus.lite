@@ -249,15 +249,19 @@ async function onHandleDefault() {
           text = await showExchangeRate(args.currency);
         }
 
-        const convo = {
-          sessionId,
-          rephrasedQuestion: userquestion,
-          messages: {
-            user: userquestion,
-            assistant: text,
-          },
-        };
-        const savedChat = await $.dorag().saveConvo(convo);
+        try{
+          const convo = {
+            sessionId,
+            rephrasedQuestion: userquestion,
+            messages: {
+              user: userquestion,
+              assistant: text || `Unable to fetch exchange rates. Please try again later.`,
+            },
+          };
+          const savedChat = await $.dorag().saveConvo(convo);
+        }catch(e){
+          console.log("Error saving exchange rate : ",e);
+        }
         await respond(text, history, true);
       })
       .on("*", async function ({ content }) {
