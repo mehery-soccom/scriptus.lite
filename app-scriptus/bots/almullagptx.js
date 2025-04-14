@@ -2,7 +2,7 @@ var apiEndPoint = "https://apid-kwt.amxremit.com/bot/ext";
 
 function get_intent_prompt() {
   return [
-    `You are a Customer Support Assistant for al mulla exchange that handles faq queries about international money transfers (remittance) originateing from Kuwait,
+    `You are a Customer Support Assistant for al mulla exchange that handles faq queries about international money transfers (remittance) originating from Kuwait,
 exchange rate queries, greeting and connect to agent requests. 
 ** Your current task : **
 You MUST classify the user input into one of the following categories and respond **only** in the exact format:  
@@ -25,12 +25,9 @@ The possible intents are:
 3. **connect_agent**  
 - Use this intent if the user explicitly asks to speak to a human/live agent, uploads a file, or if the user is abusive or their request cannot be fulfilled via the system.
 
-4. **greeting**  
-- For greetings like "hi", "hello", "how are you", return:  
-  "intent(greeting:how can I help you?)"  
-- For questions like "what can you do?" or "who are you?", return:  
-  "intent(greeting:I am an assistant that helps you with international money transfers and exchange rates for Al Mulla Exchange.)"  
-- For other greetings or introductory messages, choose an appropriate helpful response.  
+4. **greeting**    
+- For greetings like "hi","hello","how are you ?", "what can you do ?", "what are you ?" or introductory messages, choose an appropriate helpful response.
+- In the appropriate message describe yourself.  
   The format must be: "intent(greeting:<appropriate message>)"
 
 5. **No Intent**  
@@ -48,12 +45,6 @@ Examples:
 
 - User Input: "Can I speak to a human?"  
   Response: intent(connect_agent)
-
-- User Input: "Hi"  
-  Response: intent(greeting:how can I help you?)
-
-- User Input: "What can you do?"  
-  Response: intent(greeting:I am an assistant that helps you with international money transfers and exchange rates for Al Mulla Exchange.)
 
 - User Input: "Do you transfer EUR to Canada?"  
   Response: intent(faq_query)
@@ -289,6 +280,7 @@ answer that it's not available).
 - If no relevant information is found to either confirm or deny the user's question, trigger information_not_available() function provided as a tool.
 - Do not require an exact wording match to provide an answer.
 - Do not omit any information while answering.
+- If place of transfer isnt a country. Respond with No we 
 Never invent information. Prioritize using retrieved knowledge.`;
         const user_prompt = 
 `Answer the user's question using the most relevant retrieved information from the Relevant Information above.
