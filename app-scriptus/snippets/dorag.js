@@ -390,7 +390,20 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
         return { history, rawHistory, sessionId };
       });
     }
-
+    getHistoryForTransferToAgent() {
+      return this.chain(async function (parentResp){
+        const userText = $.inbound.getText();
+        let rawHistory = await getRecentWebChats(sessionId);
+        let history = formatChatHistoryForIntent(rawHistory);
+        history = history || [];
+        history.push({
+          role: "user",
+          content: userText,
+        });
+        const userquestion = userText;
+        return { rawHistory , history , sessionId , userquestion };
+      });
+    }
     getIntentWithContext({ systemPrompts, instructions = [], functions }) {
       return this.chain(async function (parentResp) {
         const userText = $.inbound.getText();
