@@ -312,8 +312,8 @@ answer that it's not available).
 - If no relevant information is found to either confirm or deny the user's question, trigger information_not_available() function provided as a tool.
 - Do not require an exact wording match to provide an answer.
 - Do not omit any information while answering.
-- Answer in plain text only. Do not use any markdown formatting like *, **, or _.
 Never invent information. Prioritize using retrieved knowledge.`;
+// - Answer in plain text only. Do not use any markdown formatting like *, **, or _.
           const user_prompt = 
   `Answer the user's question using the most relevant retrieved information from the Relevant Information above.
 - If a retrieved FAQ directly answers the question, provide that answer.
@@ -332,17 +332,20 @@ it's not supported), clearly state this negative conclusion.
           });
           
           if (answer.valid) {
+            // console.log(`answer : ${answer.ans}`);
+            const formatted_answer = await $.dorag().markDownToWhatsAppFormatter(answer.ans);
+            // console.log(`formatted answer : ${formatted_answer}`);
             const convo = {
               sessionId,
               rephrasedQuestion,
               matches,
               messages: {
                 user: userquestion,
-                assistant: answer.ans,
+                assistant: formatted_answer,
               },
             };
             const savedChat = await $.dorag().saveConvo(convo);
-            await respond(answer.ans, history);
+            await respond(formatted_answer, history);
           } else {
             const convo = {
               sessionId,

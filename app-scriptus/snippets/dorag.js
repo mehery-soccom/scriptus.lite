@@ -201,6 +201,30 @@ function formatChatHistoryForIntent(chats) {
   return arr;
 }
 /**
+ * Converts ChatGPT-style markdown to WhatsApp-compatible markdown.
+ * 
+ * Specifically:
+ * - Converts bold text from **bold** to *bold*
+ * - Converts italic text from *italic* to _italic_
+ * 
+ * Notes:
+ * - Does not support bold+italic (***text***)
+ * - Avoids false matches inside bold syntax when processing italic
+ * 
+ * @param {string} text - The input text with markdown formatting
+ * @returns {string} - The converted text using WhatsApp-style markdown
+ */
+function convertMarkdownToWhatsApp(text){
+  return text.replace(/(\*\*)(.*?)\1|(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, (match, boldDelim, boldText, italicText) => {
+      if (boldDelim) {
+          return `*${boldText}*`; // Convert **bold** → *bold*
+      } else {
+          return `_${italicText}_`; // Convert *italic* → _italic_
+      }
+  });
+};
+
+/**
  * Rephrases the current user question using OpenAI based on chat history
  * @param {string} contactId - User's contact ID
  * @param {string} currentQuestion - The current question from the user
@@ -434,7 +458,12 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
         };
       });
     }
-
+    markDownToWhatsAppFormatter(answer){
+      return this.chain(async function(parentResp){
+        const formatted_answer = convertMarkdownToWhatsApp(answer);
+        return formatted_answer;
+      })
+    }
     rephrase(message) {
       return this.chain(async function (parentResp) {
         console.log(`message in dorag snippet: ${JSON.stringify(message)}`);
