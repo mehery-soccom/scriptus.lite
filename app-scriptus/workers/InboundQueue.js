@@ -6,7 +6,7 @@ ChatBox.load({
   dir: "../",
 });
 
-@Job({ name: "inboundQueue", workers: 4 })
+@Job({ name: "inboundQueue", workers: 4, executionStrategy: Job.EXECUTION_STRATEGY.SEQUENTIAL })
 export default class InboundQueue {
   async run(job, {}) {
     console.log(`running...`, job);
