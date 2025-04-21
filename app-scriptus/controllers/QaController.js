@@ -61,8 +61,23 @@ export default class QaController {
   async homePage() {
     return "home";
   }
-
-  @RequestMapping({ path : '/pairs' , method : "get"})
+  @RequestMapping({ path : '/api/qapairs' , method : "delete"})
+  @ResponseBody
+  async deleteQaPairs({ request }){
+    const body = request.body;
+    const ids = body.del_ids;
+    // console.log(`body : ${JSON.stringify(body)}`);
+    // console.log(`ids : ${JSON.stringify(ids)}`);
+    const tenant_partition_key = body.tenant_partition_key;
+    const filter = `tenant_partition_key == "${tenant_partition_key}" AND id in [${ids}]`;
+    const res = await vectorDb.delete({
+      collection_name : collection_name,
+      filter : filter
+    });
+    return { ids , tenant_partition_key , filter : filter , res : res };
+    
+  }
+  @RequestMapping({ path : '/api/qapairs' , method : "get"})
   @ResponseBody
   async getQaPairs({ request }){
     const query = request.query;
@@ -70,15 +85,6 @@ export default class QaController {
     const page = Number(query.page)
     const pageSize = Number(query.pageSize)
     const tenant_partition_key = query.tenant_partition_key || context.getTenant();
-    const offset = (page - 1) * pageSize;
-    // console.log(`type of PageSize : ${typeof pageSize} , value : ${pageSize}`)
-    // console.log(`type of tenant partition key : ${typeof tenant_partition_key} , value : ${tenant_partition_key}`)
-    // console.log(`type of offset : ${typeof offset} , value : ${offset}`)
-    // console.log(`type of Page : ${typeof page} , value : ${page}`)
-    // return {
-    //   page,pageSize,tenant_partition_key,offset
-    // }
-    // console.log(`pageSize : ${pageSize} , offset : ${offset}`);
     const countResult = await vectorDb.query({
       collection_name: collection_name,
       filter: `tenant_partition_key == "${tenant_partition_key}"`,
@@ -86,16 +92,44 @@ export default class QaController {
     });
     const total = countResult.data[0]['count(*)'];
     const totalPages = Math.ceil(total / pageSize);
-    const queryResult = await vectorDb.query({
-      collection_name: collection_name,
-      filter: `tenant_partition_key == "${tenant_partition_key}"`,
-      output_fields: ['id','kb_id','article_id','knowledgebase'], // You can specify specific fields if needed
-      limit: pageSize,
-      offset: offset
+    const output_fields = ['id','kb_id','article_id','knowledgebase']
+    let paginationQuery = {}
+    if(page<=1){
+      paginationQuery = {
+        collection_name: collection_name,
+        filter: `tenant_partition_key == "${tenant_partition_key}"`,
+        output_fields: output_fields,
+        limit: pageSize
+      }
+    } else {
+      const lastSeenId = BigInt(query.lastSeenId);
+      paginationQuery = {
+        collection_name: collection_name,
+        filter: `tenant_partition_key == "${tenant_partition_key}" AND id > ${lastSeenId}`,
+        output_fields: output_fields,
+        limit: pageSize
+      }
+    }
+    const queryResult = await vectorDb.query(paginationQuery);
+    // if (queryResult.data.length > pageSize) {
+    //   // Remove the extra document we fetched
+    //   queryResult.data.pop();
+    // }
+    console.log(`page data length = ${queryResult.data.length}`)
+    const data = queryResult.data;
+    const sorted = data.sort((a, b) => {
+      const idA = BigInt(a.id);
+      const idB = BigInt(b.id);
+    
+      if (idA < idB) return -1;
+      if (idA > idB) return 1;
+      return 0;
     });
-    // console.log(`page data length = ${queryResult.data.length}`)
+    
+    const lastSeenId = sorted[sorted.length - 1]?.id;
     return {
-      data: queryResult.data,
+      data: sorted,
+      lastSeenId : lastSeenId,
       total,
       totalPages,
       currentPage: page
