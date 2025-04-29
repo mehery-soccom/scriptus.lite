@@ -27,6 +27,10 @@ new BootLoader()
     name: "nexus",
     context: "/nexus/",
   })
+  .map({
+    name: "tuber",
+    context: "/tuber/",
+  })
   .create(function ({ name, app }) {
     console.log(`APP[${name}]: Created`);
   })
