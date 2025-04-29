@@ -35,7 +35,7 @@ export default class NotebookController {
   }
 
   @ResponseView
-  @RequestMapping({ path: "/*", method: "get" })
+  @RequestMapping({ path: ["","/*"], method: "get" })
   async defaultPage({ CONST }) {
     CONST.WEBAPP = "nexus/notebook";
     return "notebook";
