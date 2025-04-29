@@ -24,7 +24,7 @@ new BootLoader()
     context: "/scriptus/",
   })
   .map({
-    name: "scriptus-2",
+    name: "notebook",
     context: "/scriptus/",
   })
   .create(function ({ name, app }) {
