@@ -18,6 +18,23 @@ function normalizePath(path) {
   return path.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
 }
 
+function spreadPaths(arr) {
+  return arr.flatMap((item) => {
+    const path = item.meta.path;
+    if (Array.isArray(path)) {
+      return path.map((p) => ({
+        ...item,
+        meta: {
+          ...item.meta,
+          path: p,
+        },
+      }));
+    } else {
+      return [item];
+    }
+  });
+}
+
 function toArray(value) {
   return Array.isArray(value) ? value : [value];
 }
@@ -47,20 +64,21 @@ function wrapMiddleware(middleware, status = 400, message = "Bad request") {
   };
 }
 function generateSwaggerDocs(method, options) {
-  if (method === "get" && options.query) {
+  let query = options?.openapi?.query;
+  if (method === "get" && query) {
     // Handle GET query parameters
     return {
-      parameters: Object.keys(options.query).map((key) => ({
+      parameters: Object.keys(query).map((key) => ({
         name: key,
         in: "query",
         required: false,
         schema: { type: "string" },
-        example: options.query[key] || "sample_value",
+        example: query[key] || "sample_value",
       })),
     };
   }
-
-  if (method === "post" && options.json) {
+  let json = options?.openapi?.json;
+  if (method === "post" && json) {
     // Handle POST JSON request body
     return {
       requestBody: {
@@ -70,7 +88,7 @@ function generateSwaggerDocs(method, options) {
             schema: {
               type: "object",
               properties: Object.fromEntries(
-                Object.entries(options.json).map(([key, value]) => [
+                Object.entries(json).map(([key, value]) => [
                   key,
                   { type: typeof value === "number" ? "integer" : "string", example: value },
                 ])
@@ -81,8 +99,8 @@ function generateSwaggerDocs(method, options) {
       },
     };
   }
-
-  if (method === "post" && options.form) {
+  let form = options?.openapi?.form;
+  if (method === "post" && form) {
     // Handle POST Form-urlencoded data
     return {
       requestBody: {
@@ -92,7 +110,7 @@ function generateSwaggerDocs(method, options) {
             schema: {
               type: "object",
               properties: Object.fromEntries(
-                Object.entries(options.form).map(([key, value]) => [key, { type: "string", example: value }])
+                Object.entries(form).map(([key, value]) => [key, { type: "string", example: value }])
               ),
             },
           },
@@ -161,7 +179,7 @@ export function loadApp({ name = "default", context = "", app, prefix = "" }) {
     for (const file of controllerFiles) {
       const { default: ControllerClass } = require(join(controllersPath, file));
       if (!ControllerClass) continue;
-      coreutils.log(`@Controller : ${ControllerClass.name}`,ControllerClass[Symbol.metadata]);
+      coreutils.log(`@Controller : ${ControllerClass.name}`, ControllerClass[Symbol.metadata]);
       // Get the last registered controller from the decorators system
       let controller = decorators.mappings.controller.find(ControllerClass);
       if (!controller) continue;
@@ -184,7 +202,7 @@ export function loadApp({ name = "default", context = "", app, prefix = "" }) {
       controller._routed = true;
       let cTarget = new ControllerClass();
 
-      let controllerMaps = controller.maps
+      let controllerMaps = spreadPaths(controller.maps)
         .map(function (map) {
           map._ = map._ || {};
           map._.full_path = normalizePath(`/${prefix}/${controller.meta.path}/${map.meta.path}`);
@@ -232,6 +250,7 @@ export function loadApp({ name = "default", context = "", app, prefix = "" }) {
                 CDN_DEBUG: false,
                 APP_TITLE: "Test",
                 APP: appName,
+                WEBAPP: `${appName}`,
                 APP_SITE: undefined,
                 APP_CONTEXT: "/www",
                 CDN_VERSION: "5",
@@ -295,4 +314,11 @@ export function loadApp({ name = "default", context = "", app, prefix = "" }) {
   // Attach the router to the main app with the specified context
   coreutils.log(`at ${context} `);
   app.use(context, router);
+  // Redirect root URL to /myapp
+  let contextPath = normalizePath(context);
+  if (contextPath.length > 1) {
+    app.get("/", (req, res) => {
+      res.redirect(contextPath);
+    });
+  }
 }

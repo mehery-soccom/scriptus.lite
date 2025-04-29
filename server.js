@@ -24,8 +24,12 @@ new BootLoader()
     context: "/scriptus/",
   })
   .map({
-    name: "scriptus-2",
-    context: "/scriptus/",
+    name: "nexus",
+    context: "/nexus/",
+  })
+  .map({
+    name: "tuber",
+    context: "/tuber/",
   })
   .create(function ({ name, app }) {
     console.log(`APP[${name}]: Created`);
