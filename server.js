@@ -24,8 +24,8 @@ new BootLoader()
     context: "/scriptus/",
   })
   .map({
-    name: "notebook",
-    context: "/scriptus/",
+    name: "nexus",
+    context: "/nexus/",
   })
   .create(function ({ name, app }) {
     console.log(`APP[${name}]: Created`);
