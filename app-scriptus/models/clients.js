@@ -9,7 +9,7 @@ const token = config.getIfPresent("milvus.token");
 // console.log(`milvus token = ${token}`)
 const vectorDb = address && token ? new MilvusClient({ address, token }) : null;
 
-const fields = [
+const kbqa_fields = [
   {
     name: "id",
     data_type: DataType.Int64,
@@ -38,7 +38,7 @@ const fields = [
     max_length: 36,
   },
 ];
-const index_params = [
+const kbqa_index_params = [
   {
     field_name: "id",
     index_type: IndexType.AUTOINDEX,
@@ -62,13 +62,66 @@ const index_params = [
   },
 ];
 
+const kbarticle_fields = [
+  {
+    name: "id",
+    data_type: DataType.Int64,
+    is_primary_key: true,
+    autoID: true,
+  },
+  {
+    name: "tenant_partition_key",
+    data_type: DataType.VarChar,
+    max_length: 512,
+    is_partition_key: true,
+  },
+  {
+    name: "article_vector",
+    data_type: DataType.FloatVector,
+    dim: 1536,
+  },
+  {
+    name: "kb_id",
+    data_type: DataType.VarChar,
+    max_length: 36, // UUID length is 36 characters
+  },
+  {
+    name: "article_id",
+    data_type: DataType.VarChar,
+    max_length: 36,
+  },
+];
+const kbarticle_index_params = [
+  {
+    field_name: "id",
+    index_type: IndexType.AUTOINDEX,
+  },
+  {
+    field_name: "tenant_partition_key",
+    index_type: IndexType.AUTOINDEX,
+  },
+  {
+    field_name: "article_vector",
+    index_type: IndexType.AUTOINDEX,
+    metric_type: MetricType.COSINE,
+  },
+  {
+    field_name: "kb_id",
+    index_type: IndexType.AUTOINDEX, // Index for filtering knowledge base UUIDs
+  },
+  {
+    field_name: "article_id",
+    index_type: IndexType.AUTOINDEX, // Index for filtering article UUIDs
+  },
+];
+
 if (!vectorDb) {
   console.warn("===== MMILVUS NOT INITIALIAZED");
 }
 
 const collection_prefix = config.getIfPresent("milvus.collection.prefix");
-const collection_name = `${collection_prefix}_kbqa`;
-
+const collection_kbqa = `${collection_prefix}_kbqa`;
+const collection_kbarticle = `${collection_prefix}_kbarticle`;
 // Function to initialize collection
 async function initializeCollection(collection_name, index_params, fields) {
   try {
@@ -112,8 +165,8 @@ async function initializeCollection(collection_name, index_params, fields) {
 }
 
 // Run initialization immediately when the file is imported
-initializeCollection(collection_name, index_params, fields);
-
+initializeCollection(collection_kbqa, kbqa_index_params, kbqa_fields);
+initializeCollection(collection_kbarticle, kbarticle_index_params , kbarticle_fields);
 const openAiToken = config.getIfPresent("openai.token");
 const openai = openAiToken ? new OpenAI({ apiKey: openAiToken }) : null;
 
@@ -126,4 +179,4 @@ const openai = openAiToken ? new OpenAI({ apiKey: openAiToken }) : null;
 //   }
 // }
 
-module.exports = { vectorDb, openai, collection_name };
+module.exports = { vectorDb, openai, collection_kbqa , collection_kbarticle };

@@ -1,7 +1,7 @@
 import ajax from "../../@core/ajax";
 import ChainedPromise from "../../@core/lib/ChainedPromise";
 import { webChatSchema } from "../models/WebChatModel";
-import { collection_name } from "../models/clients";
+import { collection_kbqa , collection_kbarticle } from "../models/clients";
 import { vectorDb } from "../models/clients";
 import { MetricType } from "@zilliz/milvus2-sdk-node";
 import { getExeTime } from "../../@core/utils/exetime";
@@ -13,13 +13,13 @@ const OpenAIService = require("../../@core/scriptus/clients/OpenAIService");
 
 const MRY_SCRIPTUS_DOMAIN = config.getIfPresent("mry.scriptus.domain"); // Replace with your actual tenant partition key
 
-async function generateEmbeddingOpenAi(text, dims = 512) {
+async function generateEmbeddingOpenAi(text, dims = 512, model_name = "text-embedding-3-small") {
   try {
     let service = new OpenAIService({ useGlobalConfig: true });
     let { client: openai, config } = await service.init();
     let start = Date.now();
     const response = await openai.embeddings.create({
-      model: "text-embedding-3-small", // You can replace with your preferred embedding model
+      model: model_name, // You can replace with your preferred embedding model
       input: text,
       encoding_format: "float",
       dimensions: dims,
@@ -309,13 +309,35 @@ Rephrase the user's question using the provided context.
   }
 }
 
-async function semanticSearch(embedding, output_fields, field_name, topK = 2, filter = "") {
+async function semanticSearchQa(embedding, output_fields, field_name, topK = 2, filter = "") {
   try {
     let start = Date.now();
 
     // Perform vector similarity search
     const searchResult = await vectorDb.search({
-      collection_name: collection_name,
+      collection_name: collection_kbqa,
+      vector: embedding,
+      filter: filter,
+      field_name,
+      limit: topK,
+      output_fields,
+      metric_type: MetricType.COSINE,
+    });
+    // console.log(`SEARCH RESULTS : `, JSON.stringify(searchResult));
+    await getExeTime("VectorSearch", start);
+    return searchResult.results;
+  } catch (error) {
+    console.error("Error performing semantic search:", error);
+    throw error;
+  }
+}
+async function semanticSearchArticle(embedding, output_fields, field_name, topK = 2, filter = "") {
+  try {
+    let start = Date.now();
+
+    // Perform vector similarity search
+    const searchResult = await vectorDb.search({
+      collection_name: collection_kbarticle,
       vector: embedding,
       filter: filter,
       field_name,
@@ -332,7 +354,7 @@ async function semanticSearch(embedding, output_fields, field_name, topK = 2, fi
   }
 }
 
-async function performRag(rephrasedQuestion , tenant_partition_key) {
+async function performQaRag(rephrasedQuestion , tenant_partition_key) {
   try {
     // 1. Generate embedding for the user question
     let start = Date.now();
@@ -344,10 +366,47 @@ async function performRag(rephrasedQuestion , tenant_partition_key) {
     // const park = context.getTenant();
     // else hard code it
     // const park = "almullaexchange";
-    const searchResults = await semanticSearch(
+    const searchResults = await semanticSearchQa(
       questionEmbedding,
       ["knowledgebase"],
       "fast_dense_vector",
+      2,
+      `tenant_partition_key == "${tenant_partition_key}"`
+    );
+
+    // 3. Format results for passing to the fine-tuned model
+    const topMatches = searchResults.map((result) => ({
+      knowledgebase: result.knowledgebase,
+      score: result.score,
+    }));
+
+    console.log(`Found ${topMatches.length} relevant matches`);
+    await getExeTime("RagAllMini", start);
+    return topMatches;
+
+    // The caller can then pass these top matches to their fine-tuned model
+  } catch (error) {
+    console.error("Error in RAG pipeline:", error);
+    throw error;
+  }
+}
+
+async function performArticleRag(rephrasedQuestion , tenant_partition_key) {
+  try {
+    // 1. Generate embedding for the user question
+    let start = Date.now();
+    const questionEmbedding = await generateEmbeddingOpenAi(rephrasedQuestion,1536,"text-embedding-3-large");
+
+    // 2. Perform semantic search to find similar questions
+    console.log("Performing semantic search...");
+    // if in production
+    // const park = context.getTenant();
+    // else hard code it
+    // const park = "almullaexchange";
+    const searchResults = await semanticSearchArticle(
+      questionEmbedding,
+      ["knowledgebase"],
+      "article_vector",
       2,
       `tenant_partition_key == "${tenant_partition_key}"`
     );
@@ -484,11 +543,11 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
     rag(rephrasedQuestion) {
       return this.chain(async function (parentResp) {
         const tenant_partition_key = context.getTenant()
-        const topMatches = await performRag(rephrasedQuestion , tenant_partition_key);
+        const topMatches = await performQaRag(rephrasedQuestion , tenant_partition_key);
         return topMatches;
       });
     }
-    rephraseWithRag({ userquestion, rawHistory, rephrasingRules, rephrasingConflict, rephrasingExamples }) {
+    rephraseWithQaRag({ userquestion, rawHistory, rephrasingRules, rephrasingConflict, rephrasingExamples }) {
       return this.chain(async function (parentResp) {
         const rephrasedQuestion = await rephraseWithContext({
           currentQuestion: userquestion,
@@ -500,7 +559,33 @@ module.exports = function ($, { session, execute, contactId, sessionId }) {
         console.log(`rephrased question : ${rephrasedQuestion}`);
         // const tenant_partition_key = context.getTenant()
         const tenant_partition_key = MRY_SCRIPTUS_DOMAIN || context.getTenant();
-        const topMatches = await performRag(rephrasedQuestion , tenant_partition_key);
+        console.log(`tenant_partition_key : ${tenant_partition_key} ` );
+        const topMatches = await performQaRag(rephrasedQuestion , tenant_partition_key);
+
+        let relevantInfo = "";
+        const matches = [];
+        // console.log(`topmatches : ${JSON.stringify(topMatches)}`);
+        for (let i = 0; i < topMatches.length; i++) {
+          const newInfo = `${i + 1}. ${topMatches[i].knowledgebase} \n`;
+          matches.push({ knowledgebase: newInfo, score: topMatches[i].score });
+          relevantInfo += newInfo;
+        }
+        return { rephrasedQuestion, relevantInfo, matches };
+      });
+    }
+    rephraseWithArticleRag({ userquestion , rawHistory , rephrasingRules , rephrasingConflict , rephrasingExamples }) {
+      return this.chain(async function (parentResp) {
+        const rephrasedQuestion = await rephraseWithContext({
+          currentQuestion: userquestion,
+          rawHistory: rawHistory,
+          rephrasingRules,
+          rephrasingConflict,
+          rephrasingExamples,
+        });
+        console.log(`rephrased question : ${rephrasedQuestion}`);
+        // const tenant_partition_key = context.getTenant()
+        const tenant_partition_key = MRY_SCRIPTUS_DOMAIN || context.getTenant();
+        const topMatches = await performArticleRag(rephrasedQuestion , tenant_partition_key);
 
         let relevantInfo = "";
         const matches = [];

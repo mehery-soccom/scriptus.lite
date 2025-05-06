@@ -36,23 +36,24 @@ function convertDocs(docs) {
 
 async function saveFaqs(docs) {
   const KbqaModel = mongon.model(KbqaSchema);
-  const convertedDocs = convertDocs(docs);
-  const savedDocs = await KbqaModel.insertMany(convertedDocs, { ordered: false });
+  // console.log(`docs : ${JSON.stringify(docs)}`);
+  // const convertedDocs = convertDocs(docs);
+  const savedDocs = await KbqaModel.insertMany(docs, { ordered: false });
   return savedDocs;
 }
 
 async function fetchDocsByIds(docIds) {
   const KbqaModel = mongon.model(KbqaSchema);
   try {
-    const fetchedDocs = await KbqaModel.find({ docId: { $in: docIds } })
+    const fetchedDocs = await KbqaModel.find({ _id: { $in: docIds } })
       .select({
         question: 1,
         kb_id: 1,
         answer: 1,
-        article_id: 1,
+        // article_id: 1,
         tenant_partition_key : 1,
-        docId: 1,
-        _id: 0 // Exclude the _id field
+        // docId: 1,
+        // _id: 0 // Exclude the _id field
       });
 
     return fetchedDocs;
@@ -65,21 +66,41 @@ async function fetchDocsByIds(docIds) {
 async function getDocsUpdateStatus(updateDocs, fetchedDocs) {
   // Create a hash map of fetchedDocs for faster lookup
   const fetchedDocsMap = fetchedDocs.reduce((acc, doc) => {
-    acc[doc.docId] = doc;
+    acc[doc._id] = doc;
     return acc;
   }, {});
 
   return updateDocs.map(updateDoc => {
-    const fetchedDoc = fetchedDocsMap[updateDoc.docId];
+    const fetchedDoc = fetchedDocsMap[updateDoc._id];
     return {
+      _id : updateDoc._id,
       question: updateDoc.question,
       answer: updateDoc.answer,
       kb_id : fetchedDoc.kb_id,
-      article_id : fetchedDoc.article_id,
+      // article_id : fetchedDoc.article_id,
       tenant_partition_key : fetchedDoc.tenant_partition_key,
       knowledgebase : `Question : ${updateDoc.question} \n Answer : ${updateDoc.answer}`
     };
   });
+}
+
+async function updateQaDocs(newDocs){
+  const KbqaModel = mongon.model(KbqaSchema);
+  const bulkOps = newDocs.map(doc => {
+    const { _id , ...fieldsToUpdate } = doc;
+    return {
+      updateOne : {
+        filter : { _id },
+        update : { $set : fieldsToUpdate }
+      }
+    };
+  });
+  try{
+    const result = KbqaModel.bulkWrite(bulkOps);
+    return result;
+  }catch(e){
+    console.log("Error updating : ",e);
+  }
 }
 
 async function getPaginatedDocs(tenant_partition_key, cursor = null , pageSize = 25 , page) {
@@ -93,12 +114,12 @@ async function getPaginatedDocs(tenant_partition_key, cursor = null , pageSize =
 
   // Add cursor condition
   if (page>1) {
-    baseFilter.docId = { $gt: cursor }; // fetch next page after this docId
+    baseFilter._id = { $gt: cursor }; // fetch next page after this docId
   }
 
   // Fetch paginated data
   const docs = await KbqaModel.find(baseFilter)
-    .sort({ docId: 1 }) // ascending order
+    .sort({ _id : 1 }) // ascending order
     .limit(pageSize)
     .lean();
 
@@ -108,7 +129,7 @@ async function getPaginatedDocs(tenant_partition_key, cursor = null , pageSize =
   });
 
   // Determine next cursor
-  const nextCursor = docs.length === pageSize ? docs[docs.length - 1].docId : null;
+  const nextCursor = docs.length === pageSize ? docs[docs.length - 1]._id : null;
 
   return {
     data: docs,
@@ -120,6 +141,6 @@ async function getPaginatedDocs(tenant_partition_key, cursor = null , pageSize =
 
 async function deleteKbqaDocs(ids, tenant_partition_key){
   const KbqaModel = mongon.model(KbqaSchema);
-  return await KbqaModel.deleteMany({ docId: { $in: ids } , tenant_partition_key: tenant_partition_key });
+  return await KbqaModel.deleteMany({ _id: { $in: ids } });
 }
-module.exports = { saveFaqs , fetchDocsByIds , getDocsUpdateStatus , deleteKbqaDocs , getPaginatedDocs };
+module.exports = { saveFaqs , fetchDocsByIds , getDocsUpdateStatus , deleteKbqaDocs , getPaginatedDocs , updateQaDocs };

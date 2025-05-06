@@ -6,7 +6,7 @@ import config, { store } from "@bootloader/config";
 import { z } from "zod";
 import { generateEmbeddingOpenAi } from "../services/gpt";
 import { insertQaPairs } from "../services/rag";
-import { collection_name } from "../models/clients";
+import { collection_kbqa , collection_article } from "../models/clients";
 import { vectorDb } from "../models/clients";
 import { off } from "../app";
 import { saveFaqs , fetchDocsByIds , getDocsUpdateStatus , deleteKbqaDocs , getPaginatedDocs } from "../services/kbqa";
@@ -53,7 +53,7 @@ const qapairs = z.object({
 async function deleteQaDocs(ids , tenant_partition_key){
   const filter = `tenant_partition_key == "${tenant_partition_key}" AND id in [${ids}]`;
   const resVectorDb = await vectorDb.delete({
-    collection_name : collection_name,
+    collection_name : collection_kbqa,
     filter : filter
   });
   const mongodeleteResult = await deleteKbqaDocs(ids,tenant_partition_key)
@@ -111,7 +111,7 @@ export default class QaController {
     const pageSize = Number(query.pageSize)
     const tenant_partition_key = context.getTenant();
     const countResult = await vectorDb.query({
-      collection_name: collection_name,
+      collection_name: collection_kbqa,
       filter: `tenant_partition_key == "${tenant_partition_key}"`,
       output_fields: ['count(*)']
     });
@@ -121,7 +121,7 @@ export default class QaController {
     let paginationQuery = {}
     if(page<=1){
       paginationQuery = {
-        collection_name: collection_name,
+        collection_name: collection_kbqa,
         filter: `tenant_partition_key == "${tenant_partition_key}"`,
         output_fields: output_fields,
         limit: pageSize
@@ -129,7 +129,7 @@ export default class QaController {
     } else {
       const lastSeenId = BigInt(query.lastSeenId);
       paginationQuery = {
-        collection_name: collection_name,
+        collection_name: collection_kbqa,
         filter: `tenant_partition_key == "${tenant_partition_key}" AND id > ${lastSeenId}`,
         output_fields: output_fields,
         limit: pageSize
@@ -195,10 +195,10 @@ export default class QaController {
       };
       data.push(element);
     }
-    const res = await insertQaPairs(collection_name,data);
+    const res = await insertQaPairs(collection_kbqa,data);
     const ids = res.IDs.int_id.data;
     const stored_data = await vectorDb.get({
-      collection_name : collection_name,
+      collection_name : collection_kbqa,
       ids : ids,
       output_fields : ['id','kb_id','article_id','knowledgebase','question','answer','tenant_partition_key']
     });
@@ -252,11 +252,11 @@ export default class QaController {
       data.push(element);
     }
     // console.log(`data : ${JSON.stringify(data)}`)
-    const res = await insertQaPairs(collection_name,data);
+    const res = await insertQaPairs(collection_kbqa,data);
     const ids = res.IDs.int_id.data;
     // console.log(`ids : ${ids}`);
     const stored_data = await vectorDb.get({
-      collection_name : collection_name,
+      collection_name : collection_kbqa,
       ids : ids,
       output_fields : ['id','kb_id','article_id','knowledgebase','question','answer','tenant_partition_key']
     });
@@ -264,7 +264,7 @@ export default class QaController {
     // console.log(`mongo_data : ${JSON.stringify(mongo_data)}`);
     const mongo_saved_data = await saveFaqs(mongo_data);
     // console.log(`retrived data length : ${stored_data.data.length}`);
-    // return { tenant_partition_key, ques, kb_id, article_id , collection_name , mongo_saved_data };
+    // return { tenant_partition_key, ques, kb_id, article_id , collection_kbqa , mongo_saved_data };
     return { mongo_saved_data , res };
   }
 

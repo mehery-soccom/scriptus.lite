@@ -295,7 +295,7 @@ async function onHandleDefault() {
   
           // const rephrasedQuestion = await $.dorag().rephrase(message);
           // const topMatches = await $.dorag().rag(rephrasedQuestion);
-          const { rephrasedQuestion, relevantInfo, matches } = await $.dorag().rephraseWithQaRag({
+          const { rephrasedQuestion, relevantInfo, matches } = await $.dorag().rephraseWithArticleRag({
             userquestion,
             rawHistory,
             rephrasingRules: rephrasing_rules,

@@ -11,7 +11,7 @@ import { generateEmbeddingOpenAi } from "../services/gpt";
 import { collection_name } from "../models/clients";
 import { vectorDb } from "../models/clients";
 import { off } from "../app";
-import { saveFaqs , fetchDocsByIds , getDocsUpdateStatus , deleteKbqaDocs , getPaginatedDocs } from "../services/kbqa";
+import { saveFaqs , fetchDocsByIds , getDocsUpdateStatus , deleteKbqaDocs , getPaginatedDocs , updateQaDocs } from "../services/kbqa";
 
 import crypto from "crypto";
 import UserService from "../services/UserService";
@@ -28,9 +28,7 @@ async function insertQaPairs(collection_name, data){
 }
 const qapairs = z.object({
   kb_id: z.string({ required_error: "kb_id is required." }).min(1, { message: "kb_id cannot be empty." }),
-  article_id: z.string({ required_error: "article_id is required." }).min(1, { message: "article_id cannot be empty." }),
-  ques: z
-    .array(questionSchema, { required_error: "ques array is required." })
+  ques: z.array(questionSchema, { required_error: "ques array is required." })
     .nonempty({ message: "ques array cannot be empty." })
     .superRefine((ques, ctx) => {
       ques.forEach((q, index) => {
@@ -61,15 +59,19 @@ const qapairs = z.object({
     }),
 });
 async function deleteQaDocs(ids , tenant_partition_key){
-  const filter = `tenant_partition_key == "${tenant_partition_key}" AND id in [${ids}]`;
+  const resVectorDb = await deleteQaDocsVectorDb(ids,tenant_partition_key);
+  const mongodeleteResult = await deleteKbqaDocs(ids,tenant_partition_key)
+  return { resVectorDb , mongodeleteResult };
+  // return { resVectorDb };
+}
+async function deleteQaDocsVectorDb(ids,tenant_partition_key){
+  const filter = `tenant_partition_key == "${tenant_partition_key}" AND article_id in ${JSON.stringify(ids)}`;
   const resVectorDb = await vectorDb.delete({
     collection_name : collection_name,
     filter : filter
   });
-  const mongodeleteResult = await deleteKbqaDocs(ids,tenant_partition_key)
-  return { resVectorDb , mongodeleteResult };
+  return { resVectorDb };
 }
-
 
 @Controller("/notebook")
 export default class NotebookController {
@@ -199,17 +201,19 @@ export default class NotebookController {
   async qaUpdate({ request }){
     const body = request.body;
     const updateDocs = body.updateDocs;
-    const docIds = updateDocs.map(doc => doc.docId);
-    const storedDocs = await fetchDocsByIds(docIds);
+    const update_ids = updateDocs.map(doc => doc._id);
+    const storedDocs = await fetchDocsByIds(update_ids);
     const tenant_partition_key = context.getTenant();
     const newDocs = await getDocsUpdateStatus(updateDocs,storedDocs);
+    const updatedDocs = await updateQaDocs(newDocs);
+    const resVectorDb = await deleteQaDocsVectorDb(update_ids, tenant_partition_key);
     let data = [];
     for(const doc of newDocs){
       const questionEmbedding = await generateEmbeddingOpenAi(doc.question); 
       const element = {
         tenant_partition_key: doc.tenant_partition_key,
         kb_id : doc.kb_id,
-        article_id : doc.article_id,
+        article_id : doc._id,
         fast_dense_vector: questionEmbedding,
         knowledgebase: `Question : ${doc.question} \n Answer : ${doc.answer}`,
         question : doc.question,
@@ -218,17 +222,17 @@ export default class NotebookController {
       data.push(element);
     }
     const res = await insertQaPairs(collection_name,data);
-    const ids = res.IDs.int_id.data;
-    const stored_data = await vectorDb.get({
-      collection_name : collection_name,
-      ids : ids,
-      output_fields : ['id','kb_id','article_id','knowledgebase','question','answer','tenant_partition_key']
-    });
-    const mongo_data = stored_data.data;
-    const mongo_saved_data = await saveFaqs(mongo_data);
-    const delRes = await deleteQaDocs(docIds, tenant_partition_key);
-    return { mongo_saved_data , resVectorDb : res, delRes };
-    // return { data , newDocs , storedDocs };
+    // const ids = res.IDs.int_id.data;
+    // const stored_data = await vectorDb.get({
+    //   collection_name : collection_name,
+    //   ids : ids,
+    //   output_fields : ['id','kb_id','article_id','knowledgebase','question','answer','tenant_partition_key']
+    // });
+    // const mongo_data = stored_data.data;
+    // const mongo_saved_data = await saveFaqs(mongo_data);
+    // const delRes = await deleteQaDocs(docIds, tenant_partition_key);
+    // return { mongo_saved_data , resVectorDb : res, delRes };
+    return { mongoUpdate : updatedDocs , vectorDbDel : resVectorDb , vectorDbIns : res };
   }
   @RequestMapping({ path: "/api/qapairs", method: "post" })
   @ResponseBody
@@ -258,35 +262,53 @@ export default class NotebookController {
     // console.log(`<<<<<TENANT: ${JSON.stringify(tenant_partition_key)}`, );
     const ques = body.ques;
     const kb_id = body.kb_id;
-    const article_id = body.article_id;
+    
     let data = [];
     for (const item of ques) {
-      const questionEmbedding = await generateEmbeddingOpenAi(item.que); 
+      
       const element = {
         tenant_partition_key: tenant_partition_key,
-        fast_dense_vector: questionEmbedding,
+        
         knowledgebase: `Question : ${item.que} \n Answer : ${item.ans}`,
         question : item.que,
         answer : item.ans,
         kb_id,
-        article_id,
+        // article_id,
       };
       data.push(element);
     }
+    const mongo_saved_data = await saveFaqs(data);
+    let vectorDbData = [];
+    for(const doc of mongo_saved_data){
+      console.log(`docs : ${doc}`);
+      const questionEmbedding = await generateEmbeddingOpenAi(doc.question); 
+      const vectorDbDoc = {
+        tenant_partition_key : tenant_partition_key,
+        fast_dense_vector: questionEmbedding,
+        knowledgebase: `Question : ${doc.question} \n Answer : ${doc.answer}`,
+        question : doc.question,
+        answer : doc.answer,
+        article_id : doc._id,
+        kb_id : doc.kb_id
+      }
+      vectorDbData.push(vectorDbDoc);
+    }
+
     // console.log(`data : ${JSON.stringify(data)}`)
-    const res = await insertQaPairs(collection_name,data);
-    const ids = res.IDs.int_id.data;
+
+    const res = await insertQaPairs(collection_name,vectorDbData);
+    // const ids = res.IDs.int_id.data;
     // console.log(`ids : ${ids}`);
-    const stored_data = await vectorDb.get({
-      collection_name : collection_name,
-      ids : ids,
-      output_fields : ['id','kb_id','article_id','knowledgebase','question','answer','tenant_partition_key']
-    });
-    const mongo_data = stored_data.data;
+    // const stored_data = await vectorDb.get({
+    //   collection_name : collection_name,
+    //   ids : ids,
+    //   output_fields : ['id','kb_id','article_id','knowledgebase','question','answer','tenant_partition_key']
+    // });
+    // const mongo_data = stored_data.data;
     // console.log(`mongo_data : ${JSON.stringify(mongo_data)}`);
-    const mongo_saved_data = await saveFaqs(mongo_data);
+    
     // console.log(`retrived data length : ${stored_data.data.length}`);
-    // return { tenant_partition_key, ques, kb_id, article_id , collection_name , mongo_saved_data };
-    return { mongo_saved_data , res };
+    return { tenant_partition_key, ques, kb_id, collection_name , mongo_saved_data , res };
+    // return { mongo_saved_data , res };
   }
 }
