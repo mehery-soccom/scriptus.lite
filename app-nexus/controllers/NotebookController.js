@@ -1,5 +1,4 @@
 import { Controller, RequestMapping, ResponseBody, ResponseView } from "@bootloader/core/decorators";
-import mongon from "@bootloader/mongon";
 const log4js = require("@bootloader/log4js");
 import { ensure } from "@bootloader/utils";
 import ajax from "../../@core/ajax";
@@ -11,7 +10,7 @@ import { generateEmbeddingOpenAi } from "../services/gpt";
 import { collection_name } from "../models/clients";
 import { vectorDb } from "../models/clients";
 import { off } from "../app";
-import { saveFaqs , fetchDocsByIds , getDocsUpdateStatus , deleteKbqaDocs , getPaginatedDocs , updateQaDocs } from "../services/kbqa";
+import { saveFaqs , fetchDocsByIds , getDocsUpdateStatus , deleteKbqaDocs , getPaginatedDocs , updateQaDocs , createNewKb , getAllKbs , deleteKb } from "../services/kbqa";
 
 import crypto from "crypto";
 import UserService from "../services/UserService";
@@ -58,14 +57,15 @@ const qapairs = z.object({
       });
     }),
 });
-async function deleteQaDocs(ids , tenant_partition_key){
-  const resVectorDb = await deleteQaDocsVectorDb(ids,tenant_partition_key);
-  const mongodeleteResult = await deleteKbqaDocs(ids,tenant_partition_key)
+async function deleteQaDocs(ids , tenant_partition_key, kb_id){
+  const resVectorDb = await deleteQaDocsVectorDb(ids,tenant_partition_key, kb_id);
+  const mongodeleteResult = await deleteKbqaDocs(ids,tenant_partition_key, kb_id);
   return { resVectorDb , mongodeleteResult };
   // return { resVectorDb };
 }
-async function deleteQaDocsVectorDb(ids,tenant_partition_key){
-  const filter = `tenant_partition_key == "${tenant_partition_key}" AND article_id in ${JSON.stringify(ids)}`;
+async function deleteQaDocsVectorDb(ids,tenant_partition_key, kb_id){
+  const filter = `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}" AND article_id in ${JSON.stringify(ids)}`;
+  // const filter = `tenant_partition_key == "${tenant_partition_key}" AND article_id in ${JSON.stringify(ids)}`;
   const resVectorDb = await vectorDb.delete({
     collection_name : collection_name,
     filter : filter
@@ -83,7 +83,7 @@ export default class NotebookController {
   @RequestMapping({ path: "/list", method: "get", query: {} })
   async homePage() {
     return UserService.getUsersAll();
-  }
+  }  
 
   @RequestMapping({ path: "/create", method: "post", form: { name: "NAME", email: "name@name.com", code: "COD" } })
   @ResponseBody
@@ -111,11 +111,12 @@ export default class NotebookController {
   async deleteQaPairs({ request }){
     const body = request.body;
     const ids = body.del_ids;
+    const kb_id = body.kb_id
     // console.log(`body : ${JSON.stringify(body)}`);
     // console.log(`ids : ${JSON.stringify(ids)}`);
     const tenant_partition_key = context.getTenant();
     // const filter = `tenant_partition_key == "${tenant_partition_key}"`;
-    const delRes = await deleteQaDocs(ids , tenant_partition_key);
+    const delRes = await deleteQaDocs(ids , tenant_partition_key , kb_id);
     return { ids , tenant_partition_key , delRes };
   }
 
@@ -124,11 +125,12 @@ export default class NotebookController {
   async getQaPairsMongodb({ request }){
     const query = request.query;
     console.log(JSON.stringify(query))
+    const kb_id = query.kb_id;
     const page = Number(query.page)
     const pageSize = Number(query.pageSize)
     const tenant_partition_key = context.getTenant();
     const lastSeenId = query.lastSeenId || null;
-    const paginatedDocs = await getPaginatedDocs(tenant_partition_key , lastSeenId , pageSize , page);
+    const paginatedDocs = await getPaginatedDocs(kb_id,tenant_partition_key , lastSeenId , pageSize , page);
     console.log(`page data length = ${paginatedDocs.data.length}`)
     return { data : paginatedDocs.data , 
       lastSeenId : paginatedDocs.nextCursor , 
@@ -143,14 +145,16 @@ export default class NotebookController {
   async getQaPairsVectordb({ request }){
     const query = request.query;
     console.log(JSON.stringify(query))
+    const kb_id = query.kb_id;
     const page = Number(query.page)
     const pageSize = Number(query.pageSize)
     const tenant_partition_key = context.getTenant();
     const countResult = await vectorDb.query({
       collection_name: collection_name,
-      filter: `tenant_partition_key == "${tenant_partition_key}"`,
+      filter: `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}"`,
       output_fields: ['count(*)']
     });
+    console.log(`count result : ${JSON.stringify(countResult)}`);
     const total = countResult.data[0]['count(*)'];
     const totalPages = Math.ceil(total / pageSize);
     const output_fields = ['id','kb_id','article_id','knowledgebase']
@@ -158,7 +162,7 @@ export default class NotebookController {
     if(page<=1){
       paginationQuery = {
         collection_name: collection_name,
-        filter: `tenant_partition_key == "${tenant_partition_key}"`,
+        filter: `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}"`,
         output_fields: output_fields,
         limit: pageSize
       }
@@ -166,7 +170,7 @@ export default class NotebookController {
       const lastSeenId = BigInt(query.lastSeenId);
       paginationQuery = {
         collection_name: collection_name,
-        filter: `tenant_partition_key == "${tenant_partition_key}" AND id > ${lastSeenId}`,
+        filter: `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}" AND id > ${lastSeenId}`,
         output_fields: output_fields,
         limit: pageSize
       }
@@ -200,13 +204,14 @@ export default class NotebookController {
   @ResponseBody
   async qaUpdate({ request }){
     const body = request.body;
+    const kb_id = body.kb_id;
     const updateDocs = body.updateDocs;
     const update_ids = updateDocs.map(doc => doc._id);
-    const storedDocs = await fetchDocsByIds(update_ids);
     const tenant_partition_key = context.getTenant();
+    const storedDocs = await fetchDocsByIds(update_ids, kb_id, tenant_partition_key);
     const newDocs = await getDocsUpdateStatus(updateDocs,storedDocs);
     const updatedDocs = await updateQaDocs(newDocs);
-    const resVectorDb = await deleteQaDocsVectorDb(update_ids, tenant_partition_key);
+    const resVectorDb = await deleteQaDocsVectorDb(update_ids, tenant_partition_key, kb_id);
     let data = [];
     for(const doc of newDocs){
       const questionEmbedding = await generateEmbeddingOpenAi(doc.question); 
@@ -233,6 +238,35 @@ export default class NotebookController {
     // const delRes = await deleteQaDocs(docIds, tenant_partition_key);
     // return { mongo_saved_data , resVectorDb : res, delRes };
     return { mongoUpdate : updatedDocs , vectorDbDel : resVectorDb , vectorDbIns : res };
+  }
+  @RequestMapping({ path : "/api/qapairs/kb" , method : "post"})
+  @ResponseBody
+  async createKbs({ request }){
+    const body = request.body;
+    const kb_name = body.kb_name;
+    const tenant_partition_key = context.getTenant();
+    const result = await createNewKb(kb_name , tenant_partition_key);
+    return { result };
+  }
+  @RequestMapping({ path : "/api/qapairs/kb" , method : "get"})
+  @ResponseBody
+  async getKbs({ request }){
+    const query = request.query;
+    const isDetailed = query.isDetailed;
+    const tenant_partition_key = context.getTenant();
+    const result = await getAllKbs(tenant_partition_key,isDetailed);
+    return { result };
+  }
+  @RequestMapping({ path : "/api/qapairs/kb" , method : "delete"})
+  @ResponseBody
+  async deleteKbs({ request }){
+    const tenant_partition_key = context.getTenant();
+    const body = request.body;
+    const kb_name = body.kb_name;
+    const kb_id = body.kb_id;
+    const result = await deleteKb(kb_name,kb_id,tenant_partition_key);
+    console.log(`delete kb : ${JSON.stringify(result)}`);
+    return { result };
   }
   @RequestMapping({ path: "/api/qapairs", method: "post" })
   @ResponseBody

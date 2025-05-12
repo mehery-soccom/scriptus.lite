@@ -1,39 +1,37 @@
 const mongon = require('@bootloader/mongon');
 
 const KbqaSchema = mongon.Schema({
-  // docId: {
-  //   type: String,
-  //   index: true,
-  //   required: true,
-  //   unique: true,
-  // },
   kb_id: {
     type: String,
-    required: true,
+    default: null,
+    index: true
   },
-  // article_id: {
-  //   type: String,
-  //   required: true,
-  // },
+  kb_name: {
+    type: String,
+    default: undefined,
+    index: true,
+    unique: true, // This will enforce uniqueness for all kb_name values
+    sparse: true // Allows multiple documents to have a null kb_name without violating the unique constraint
+  },
   knowledgebase: {
     type: String,
-    required: true,
+    default: null
   },
   question: {
     type: String,
-    required: true,
+    default: null
   },
   answer: {
     type: String,
-    required: true,
+    default: null
   },
   tenant_partition_key: {
     type: String,
-    required: true,
+    required: true
   },
-},{
-  // Add createdAt and updatedAt timestamps automatically
-  timestamps: true , collection : "kbqa"
+}, {
+  timestamps: true,
+  collection: "kbqa"
 });
 
 
