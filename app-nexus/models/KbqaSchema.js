@@ -13,9 +13,17 @@ const KbqaSchema = mongon.Schema({
     unique: true, // This will enforce uniqueness for all kb_name values
     sparse: true // Allows multiple documents to have a null kb_name without violating the unique constraint
   },
-  knowledgebase: {
+  topic_id:{
+    type : String,
+    default:null,
+    index:true
+  },
+  topic_name:{
     type: String,
-    default: null
+    default: undefined,
+    index: true,
+    unique: true, // This will enforce uniqueness for all kb_name values
+    sparse: true // Allows multiple documents to have a null kb_name without violating the unique constraint
   },
   question: {
     type: String,

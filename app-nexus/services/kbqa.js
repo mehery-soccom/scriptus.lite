@@ -45,23 +45,25 @@ async function saveFaqs(docs) {
   return savedDocs;
 }
 
-async function fetchDocsByIds(docIds, kb_id, tenant_partition_key) {
+async function fetchDocsByIds(docIds, kb_id, topic_id, tenant_partition_key) {
   const KbqaModel = mongon.model(KbqaSchema);
   try {
     const fetchedDocs = await KbqaModel.find({
       _id: { $in: docIds },
       kb_id: kb_id,
+      topic_id: topic_id,
       tenant_partition_key: tenant_partition_key,
     }).select({
       question: 1,
       kb_id: 1,
       answer: 1,
+      topic_id: 1,
       // article_id: 1,
       tenant_partition_key: 1,
       // docId: 1,
       // _id: 0 // Exclude the _id field
     });
-
+    // console.log(`fetchedDocs : ${JSON.stringify(fetchedDocs)}`);
     return fetchedDocs;
   } catch (error) {
     console.error("Error fetching documents:", error);
@@ -83,9 +85,9 @@ async function getDocsUpdateStatus(updateDocs, fetchedDocs) {
       question: updateDoc.question,
       answer: updateDoc.answer,
       kb_id: fetchedDoc.kb_id,
+      topic_id: fetchedDoc.topic_id,
       // article_id : fetchedDoc.article_id,
       tenant_partition_key: fetchedDoc.tenant_partition_key,
-      knowledgebase: `Question : ${updateDoc.question} \n Answer : ${updateDoc.answer}`,
     };
   });
 }
@@ -109,12 +111,13 @@ async function updateQaDocs(newDocs) {
   }
 }
 
-async function getPaginatedDocs(kb_id, tenant_partition_key, cursor = null, pageSize = 25, page) {
+async function getPaginatedDocs(kb_id, topic_id, tenant_partition_key, cursor = null, pageSize = 25, page) {
   const KbqaModel = mongon.model(KbqaSchema);
 
   // Filter base
   const baseFilter = {
     kb_id,
+    topic_id,
     tenant_partition_key,
   };
 
@@ -132,6 +135,7 @@ async function getPaginatedDocs(kb_id, tenant_partition_key, cursor = null, page
   // Get total count for this tenant's selected knowledgebase (for pagination metadata)
   const totalCount = await KbqaModel.countDocuments({
     kb_id,
+    topic_id,
     tenant_partition_key,
   });
 
@@ -146,9 +150,14 @@ async function getPaginatedDocs(kb_id, tenant_partition_key, cursor = null, page
   };
 }
 
-async function deleteKbqaDocs(ids, tenant_partition_key, kb_id) {
+async function deleteKbqaDocs(ids, tenant_partition_key, kb_id, topic_id) {
   const KbqaModel = mongon.model(KbqaSchema);
-  return await KbqaModel.deleteMany({ _id: { $in: ids }, kb_id: kb_id, tenant_partition_key: tenant_partition_key });
+  return await KbqaModel.deleteMany({
+    _id: { $in: ids },
+    kb_id: kb_id,
+    topic_id: topic_id,
+    tenant_partition_key: tenant_partition_key,
+  });
 }
 
 // Knowledge base queries
@@ -164,11 +173,33 @@ async function createNewKb(kbName, tenantPartitionKey) {
       tenant_partition_key: tenantPartitionKey,
     });
     const savedNode = await new_kb.save();
-    return { success : true , savedNode , message : `New Knowledge base ${kbName} created successfully`};
+    return { success: true, savedNode, message: `New Knowledge base ${kbName} created successfully` };
   } catch (error) {
     if (error.code === 11000 && error.keyPattern && error.keyPattern.kb_name) {
       // MongoDB duplicate key error for kb_name
       return { success: false, message: `A knowledge base with name : ${kbName} already exists` };
+    } else {
+      console.error("Error creating parent node:", error);
+      return { success: false, message: "An unexpected error occurred while creating the knowledge base" };
+    }
+  }
+}
+async function createNewTopic(kb_id, topic_name, tenantPartitionKey) {
+  try {
+    const KbqaModel = mongon.model(KbqaSchema);
+    const new_kb = new KbqaModel({
+      kb_id: kb_id,
+      topic_name: topic_name,
+      question: null,
+      answer: null,
+      tenant_partition_key: tenantPartitionKey,
+    });
+    const savedNode = await new_kb.save();
+    return { success: true, savedNode, message: `New Topic ${topic_name} created successfully` };
+  } catch (error) {
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.topic_name) {
+      // MongoDB duplicate key error for kb_name
+      return { success: false, message: `A Topic with name : ${topic_name} already exists` };
     } else {
       console.error("Error creating parent node:", error);
       return { success: false, message: "An unexpected error occurred while creating the knowledge base" };
@@ -194,8 +225,14 @@ async function getAllKbs(tenant_partition_key, isDetailed) {
             pipeline: [
               {
                 $match: {
+                  // $expr: {
+                  //   $eq: ["$kb_id", "$$parentIdStr"], // Now both are strings
+                  // },
                   $expr: {
-                    $eq: ["$kb_id", "$$parentIdStr"], // Now both are strings
+                    $and: [
+                      { $eq: ["$kb_id", "$$parentIdStr"] },
+                      { $ne: ["$topic_id", null] }, // topic_id is not null
+                    ],
                   },
                 },
               },
@@ -224,12 +261,87 @@ async function getAllKbs(tenant_partition_key, isDetailed) {
     console.log("Error fetching all Kbs : ", error);
   }
 }
-async function deleteKb(kb_name, kb_id, tenant_partition_key) {
+
+async function getAllTopicsByKb(kb_id, tenant_partition_key, isDetailed) {
+  try {
+    const KbqaModel = mongon.model(KbqaSchema);
+    if (isDetailed) {
+      const result = await KbqaModel.aggregate([
+        {
+          $match: {
+            kb_id: kb_id,
+            topic_id: { $in: [null, undefined] },
+            tenant_partition_key: tenant_partition_key,
+          },
+        },
+        {
+          $lookup: {
+            from: "kbqa",
+            let: { parentIdStr: { $toString: "$_id" } }, // Convert ObjectId to string
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$topic_id", "$$parentIdStr"], // Now both are strings
+                  },
+                },
+              },
+            ],
+            as: "children",
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            // kb_name: 1,
+            topic_name: 1,
+            count: { $size: "$children" },
+          },
+        },
+      ]);
+
+      console.log(`detailed res : ${JSON.stringify(result)}`);
+      return result;
+    } else {
+      const result = await KbqaModel.find({
+        kb_id: kb_id,
+        topic_id: null,
+        tenant_partition_key: tenant_partition_key,
+      }).select({
+        topic_name: 1,
+      });
+      return result;
+    }
+  } catch (error) {
+    console.log("Error fetching all Kbs : ", error);
+  }
+}
+
+async function deleteKb(kb_id, tenant_partition_key) {
   try {
     const KbqaModel = mongon.model(KbqaSchema);
     const deleteChildren = await KbqaModel.deleteMany({ kb_id: kb_id, tenant_partition_key: tenant_partition_key });
     const deleteKb = await KbqaModel.deleteOne({ _id: kb_id, tenant_partition_key: tenant_partition_key });
     return { success: true, deleteChildren, deleteKb };
+  } catch (error) {
+    console.log("Error fetching all Kbs : ", error);
+    return { success: false, message: "An unexpected error occurred while creating the knowledge base" };
+  }
+}
+async function deleteTopicByKb(kb_id, topic_id, tenant_partition_key) {
+  try {
+    const KbqaModel = mongon.model(KbqaSchema);
+    const deleteChildren = await KbqaModel.deleteMany({
+      kb_id: kb_id,
+      topic_id: topic_id,
+      tenant_partition_key: tenant_partition_key,
+    });
+    const deleteTopic = await KbqaModel.deleteOne({
+      _id: topic_id,
+      kb_id: kb_id,
+      tenant_partition_key: tenant_partition_key,
+    });
+    return { success: true, deleteChildren, deleteTopic };
   } catch (error) {
     console.log("Error fetching all Kbs : ", error);
     return { success: false, message: "An unexpected error occurred while creating the knowledge base" };
@@ -245,4 +357,7 @@ module.exports = {
   createNewKb,
   getAllKbs,
   deleteKb,
+  createNewTopic,
+  deleteTopicByKb,
+  getAllTopicsByKb,
 };
