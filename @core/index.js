@@ -1,6 +1,5 @@
 const http = require("http");
-const https = require('https');
-
+const https = require("https");
 
 const config = require("@bootloader/config");
 const utils = require("@bootloader/utils");
@@ -31,6 +30,7 @@ function BootLoader(...args) {
   this.map = function (o) {
     o.name = o.name || DEFAULT_APP;
     o.path = o.path || coreutils.getAppPath(o.name);
+    o.include = coreutils.toArray(o.include || []);
     mappings.push(o);
     return this;
   };
@@ -55,14 +55,14 @@ function BootLoader(...args) {
         mappings.filter(function (arg) {
           return arg.name == APP;
         })[0] || options;
-      let { name = "default", path, context } = options;
+      let { name = "default", path, context, include } = options;
 
       coreutils.options(options);
       coreutils.log(`Creating on ${context}`);
 
       Apps.load(options);
       Middlewares.load();
-      
+
       app = require(`./../${path}/app.js`);
       app.use(Middlewares.get("ContextParser"));
       app.use(utils.context.withRequest());
@@ -76,7 +76,6 @@ function BootLoader(...args) {
   this.launch = function (onLaunch) {
     utils.context.init({ tenant: "LNC" }, () => {
       let port = process.env.PORT || config.get("server.port");
-      console.log(`APP[${options.name}]: Launching on ${port}:/${options.context}`);
 
       //Create a server
       var server = null;
@@ -95,6 +94,7 @@ function BootLoader(...args) {
       } else {
         server = http.createServer(app);
       }
+      console.log(`APP[${options.name}]: Launching on ${port}:/${options.context}`);
       //Lets start our server
       server.listen(port, function () {
         //console.log("NGROK_URL",config.getIfPresent("NGROK_URL"))
@@ -109,9 +109,15 @@ function BootLoader(...args) {
   };
 
   this.initJobs = function () {
-    utils.context.init({ tenant: "JBS" }, () => {
-      initJobs(options);
-      LOGGER.info("inited....xxxxxxxxxxxxxxsxxxx", utils.context.getTraceId());
+    utils.context.init({ tenant: "JBS" }, async () => {
+      try {
+        let initd = await initJobs(options);
+        if (initd) {
+          LOGGER.info("JOBS : initd");
+        }
+      } catch (e) {
+        LOGGER.info("JOBS : Not initd");
+      }
     });
     return this;
   };
