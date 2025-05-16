@@ -1,18 +1,8 @@
 const { KbqaSchema } = require("../models/KbqaSchema");
 const mongon = require("@bootloader/mongon");
-const crypto = require("crypto");
 
-/**
- * Hashes a string using SHA-256
- * @param {string} input
- * @returns {string}
- */
-function hashString(input) {
-  return crypto
-    .createHash("sha256")
-    .update(input || "")
-    .digest("hex");
-}
+
+
 
 /**
  * Converts an array of documents by flattening fields and adding hashes

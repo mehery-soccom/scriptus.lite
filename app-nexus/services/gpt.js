@@ -24,13 +24,13 @@ async function generateEmbeddingAllMini(text) {
   }
 }
 
-async function generateEmbeddingOpenAi(text, dims = 512) {
+async function generateEmbeddingOpenAi(text, dims = 512,model_name = "text-embedding-3-small") {
   try {
     let service = new OpenAIService({ useGlobalConfig : true })
     let { client:openai , config } = await service.init()
     let start = Date.now();
     const response = await openai.embeddings.create({
-      model: "text-embedding-3-small", // You can replace with your preferred embedding model
+      model: model_name, // You can replace with your preferred embedding model
       input: text,
       encoding_format: "float",
       dimensions: dims,

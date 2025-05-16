@@ -7,7 +7,7 @@ import { context } from "@bootloader/utils";
 import config, { store } from "@bootloader/config";
 import { z } from "zod";
 import { generateEmbeddingOpenAi } from "../services/gpt";
-import { collection_name } from "../models/clients";
+import { collection_kbqa } from "../models/clients";
 import { vectorDb } from "../models/clients";
 import { off } from "../app";
 import {
@@ -83,7 +83,7 @@ async function deleteQaDocsVectorDb(filter) {
   
   // const filter = `tenant_partition_key == "${tenant_partition_key}"`;
   const resVectorDb = await vectorDb.delete({
-    collection_name: collection_name,
+    collection_name: collection_kbqa,
     filter: filter,
   });
   return { resVectorDb };
@@ -143,7 +143,7 @@ export default class NotebookController {
     const pageSize = Number(query.pageSize);
     const tenant_partition_key = context.getTenant();
     const countResult = await vectorDb.query({
-      collection_name: collection_name,
+      collection_name: collection_kbqa,
       filter: `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}" AND topic_id == "${topic_id}"`,
       output_fields: ["count(*)"],
     });
@@ -154,7 +154,7 @@ export default class NotebookController {
     let paginationQuery = {};
     if (page <= 1) {
       paginationQuery = {
-        collection_name: collection_name,
+        collection_name: collection_kbqa,
         filter: `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}" AND topic_id == "${topic_id}"`,
         output_fields: output_fields,
         limit: pageSize,
@@ -162,7 +162,7 @@ export default class NotebookController {
     } else {
       const lastSeenId = BigInt(query.lastSeenId);
       paginationQuery = {
-        collection_name: collection_name,
+        collection_name: collection_kbqa,
         filter: `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}" AND topic_id == "${topic_id}" AND id > ${lastSeenId}`,
         output_fields: output_fields,
         limit: pageSize,
@@ -223,7 +223,7 @@ export default class NotebookController {
       };
       data.push(element);
     }
-    const res = await insertQaPairs(collection_name, data);
+    const res = await insertQaPairs(collection_kbqa, data);
     return { mongoUpdate: updatedDocs, vectorDbDel: resVectorDb, vectorDbIns: res };
     // return { storedDocs };
   }
@@ -355,10 +355,8 @@ export default class NotebookController {
 
     // console.log(`data : ${JSON.stringify(data)}`)
 
-    const res = await insertQaPairs(collection_name, vectorDbData);
-    return { tenant_partition_key, ques, kb_id, collection_name, mongo_saved_data, res };
+    const res = await insertQaPairs(collection_kbqa, vectorDbData);
+    return { tenant_partition_key, ques, kb_id, collection_name : collection_kbqa , mongo_saved_data, res };
     // return { mongo_saved_data , res };
   }
-
-
 }
