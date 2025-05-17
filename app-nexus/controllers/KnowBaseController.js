@@ -19,7 +19,8 @@ import {
   deleteArticleDocs,
   fetchArticlesByIds,
   getArticleUpdateStatus,
-  updateArticleDocs
+  updateArticleDocs,
+  deleteKb
 } from "../services/knowbase";
 
 import crypto from "crypto";
@@ -259,6 +260,7 @@ export default class KnowBaseController {
     const resultMongo = await deleteKb(kb_id, tenant_partition_key);
     const filter = `tenant_partition_key == "${tenant_partition_key}" AND kb_id == "${kb_id}"`;
     const resultVectordb = await deleteQaDocsVectorDb(filter);
+    console.log(`result : ${JSON.stringify({  success : true,  resultMongo , resultVectordb })}`);
     return {  success : true,  resultMongo , resultVectordb };
   }
 

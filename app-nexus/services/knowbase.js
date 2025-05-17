@@ -149,6 +149,17 @@ async function updateArticleDocs(newDocs) {
     console.log("Error updating : ", e);
   }
 }
+async function deleteKb(kb_id) {
+  try {
+    const KnowBaseModel = mongon.model(KnowBaseSchema);
+    const deleteChildren = await KnowBaseModel.deleteMany({ parentId: kb_id });
+    const deleteKb = await KnowBaseModel.deleteOne({ _id: kb_id });
+    return { success: true, deleteChildren, deleteKb };
+  } catch (error) {
+    console.log("Error fetching all Kbs : ", error);
+    return { success: false, message: "An unexpected error occurred while creating the knowledge base" };
+  }
+}
 module.exports = {
   createRandomString,
   createKbs,
@@ -158,5 +169,6 @@ module.exports = {
   deleteArticleDocs,
   fetchArticlesByIds,
   getArticleUpdateStatus,
-  updateArticleDocs
+  updateArticleDocs,
+  deleteKb
 };
