@@ -1,12 +1,15 @@
 const { MetricType } = require("@zilliz/milvus2-sdk-node");
-const { vectorDb } = require("../models/clients");
+const { vectorDb , collection_kbqa , collection_kbarticle} = require("../models/clients");
 const { generateEmbeddingOpenAi, generateEmbeddingAllMini } = require("./gpt");
 const { getExeTime } = require("../../@core/utils/exetime");
 const { rephraseWithContext } = require("./webChat");
 async function loadDb() {
   if (vectorDb) {
     await vectorDb.loadCollection({
-      collection_name: "qaSchema",
+      collection_name: collection_kbarticle,
+    });
+    await vectorDb.loadCollection({
+      collection_name: collection_kbqa,
     });
     // await vectorDb.loadCollection({
     //   collection_name: "fast_semantic_search",

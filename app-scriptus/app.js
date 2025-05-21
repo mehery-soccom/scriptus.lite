@@ -8,7 +8,9 @@ const { loadDb } = require("./services/rag")
 const { connectDB } = require("./models/clients")
 const app = express();
 //app.use(express.static("public"));
-
+BigInt.prototype.toJSON = function() {
+  return this.toString();
+};
 loadDb()
 
 global.appRoot = path.resolve(__dirname);
