@@ -25,9 +25,9 @@ async function initJobs({ name, path }) {
     controllerFiles = readdirSync(jobsPath).filter((file) => file.endsWith(".js"));
   }
   let client = await waitForReady();
-  if(!client){
+  if (!client) {
     console.log("Redis Client", client || "NONE");
-    return false
+    return false;
   }
 
   for (const file of controllerFiles) {
@@ -85,10 +85,27 @@ async function initJobs({ name, path }) {
           taskOptions.jobId = taskOptions.jobId || `queue-${taskOptions.queue}`;
           //console.log(`execute(jobId:${taskOptions.jobId})`);
           if (data) {
-            await redis.rpush(
-              `${redisQueuePrefix}${taskOptions.jobId}`,
-              JSON.stringify({ data, context: utils.context.toMap() })
-            );
+            const redisQueueId = `${redisQueuePrefix}${taskOptions.jobId}`;
+            let wasAdded = true;
+            if (taskOptions.dedupeKey) {
+              wasAdded = await redis.sadd(`${redisQueueId}-set`, taskOptions.dedupeKey);
+              redis.expire(redisQueueId, 60 * 60); // expire after 1 hour
+              if (wasAdded && taskOptions.dedupeSpan) {
+                await utils.timely.wait(taskOptions.dedupeSpan);
+              }
+              //await redis.srem(this.setKey, item.uniqueKey);
+            }
+            if (wasAdded) {
+              await redis.rpush(
+                redisQueueId,
+                JSON.stringify({ data, context: utils.context.toMap(), dedupeKey: taskOptions.dedupeKey })
+              );
+            } else {
+              // console.log(
+              //   `❌ Task with dedupeKey ${taskOptions.dedupeKey} already exists in queue(${taskOptions.queue})`
+              // );
+              return;
+            }
           } else {
             //console.log(`No data to queue(${taskOptions.queue}) !!`);
           }
@@ -197,11 +214,15 @@ async function initJobs({ name, path }) {
               let taskOptions = { jobId: task.id };
               if (executionStrategy == "sequential") {
                 //console.log(`Polling from :${task.id}`);
-                const message = await redis.lpop(`${redisQueuePrefix}${task.id}`);
+                const redisQueueId = `${redisQueuePrefix}${task.id}`;
+                const message = await redis.lpop(redisQueueId);
                 if (message) {
-                  let { data, context } = JSON.parse(message);
+                  let { data, context, dedupeKey } = JSON.parse(message);
                   utils.context.fromMap(context);
                   await jobInstance.onExecute(data, task.data);
+                  if (dedupeKey) {
+                    await redis.srem(`${redisQueueId}-set`, dedupeKey);
+                  }
                   removeJob(task, async () => {
                     await JobClass.execute(null, task.data);
                   });
