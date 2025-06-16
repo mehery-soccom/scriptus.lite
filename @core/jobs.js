@@ -25,9 +25,9 @@ async function initJobs({ name, path }) {
     controllerFiles = readdirSync(jobsPath).filter((file) => file.endsWith(".js"));
   }
   let client = await waitForReady();
-  if(!client){
+  if (!client) {
     console.log("Redis Client", client || "NONE");
-    return false
+    return false;
   }
 
   for (const file of controllerFiles) {
@@ -85,10 +85,27 @@ async function initJobs({ name, path }) {
           taskOptions.jobId = taskOptions.jobId || `queue-${taskOptions.queue}`;
           //console.log(`execute(jobId:${taskOptions.jobId})`);
           if (data) {
-            await redis.rpush(
-              `${redisQueuePrefix}${taskOptions.jobId}`,
-              JSON.stringify({ data, context: utils.context.toMap() })
-            );
+            const redisQueueId = `${redisQueuePrefix}${taskOptions.jobId}`;
+            let wasAdded = true;
+            if (taskOptions.dedupeKey) {
+              wasAdded = await redis.sadd(`${redisQueueId}-set`, taskOptions.dedupeKey);
+              redis.expire(redisQueueId, 60 * 60); // expire after 1 hour
+              if (wasAdded && taskOptions.dedupeSpan) {
+                await utils.timely.wait(taskOptions.dedupeSpan);
+              }
+              //await redis.srem(this.setKey, item.uniqueKey);
+            }
+            if (wasAdded) {
+              await redis.rpush(
+                redisQueueId,
+                JSON.stringify({ data, context: utils.context.toMap(), dedupeKey: taskOptions.dedupeKey })
+              );
+            } else {
+              // console.log(
+              //   `❌ Task with dedupeKey ${taskOptions.dedupeKey} already exists in queue(${taskOptions.queue})`
+              // );
+              return;
+            }
           } else {
             //console.log(`No data to queue(${taskOptions.queue}) !!`);
           }
@@ -197,11 +214,15 @@ async function initJobs({ name, path }) {
               let taskOptions = { jobId: task.id };
               if (executionStrategy == "sequential") {
                 //console.log(`Polling from :${task.id}`);
-                const message = await redis.lpop(`${redisQueuePrefix}${task.id}`);
+                const redisQueueId = `${redisQueuePrefix}${task.id}`;
+                const message = await redis.lpop(redisQueueId);
                 if (message) {
-                  let { data, context } = JSON.parse(message);
+                  let { data, context, dedupeKey } = JSON.parse(message);
                   utils.context.fromMap(context);
                   await jobInstance.onExecute(data, task.data);
+                  if (dedupeKey) {
+                    await redis.srem(`${redisQueueId}-set`, dedupeKey);
+                  }
                   removeJob(task, async () => {
                     await JobClass.execute(null, task.data);
                   });
@@ -258,7 +279,7 @@ async function initJobs({ name, path }) {
         await JobClass.run(data, options);
       };
 
-      jobInstance.push = async function (data, options = {}) {
+      jobInstance.send = async function (data, options = {}) {
         let queueName = `eq:app:*:topic:${job.meta.name}`;
         await redis.lpush(queueName, JSON.stringify({ data, context: utils.context.toMap() })); // Non-Blocking call
       };
@@ -274,10 +295,10 @@ async function initQueues(app) {
   await waitForReady();
   for (const { name, job } of Object.values(jobHolders)) {
     try {
-      job.onPush = job.onPush || job.poll || job.push;
-      if (typeof job.onPush == "function") {
-        await executeOnPush(app, name, job);
-        await executeOnPush("*", name, job);
+      job.onSend = job.onPush || job.poll || job.push || job.onSend || job.send || job.onReceive || job.receive;
+      if (typeof job.onSend == "function") {
+        await executeOnSend(app, name, job);
+        await executeOnSend("*", name, job);
       }
     } catch (error) {
       coreutils.error("Queue processing error:", error);
@@ -286,13 +307,13 @@ async function initQueues(app) {
   setTimeout(() => initQueues(app), 1000);
 }
 
-async function executeOnPush(app, topic, job) {
+async function executeOnSend(app, topic, job) {
   let queueName = `eq:app:${app}:topic:${topic}`;
   const message = await redis.rpop(queueName); // Non-Blocking call
   if (message) {
     let event = JSON.parse(message);
     coreutils.log(`Processed in Node.js ${queueName}: (${event})`);
-    job.onPush(event.data, {});
+    job.onSend(event.data, {});
   }
 }
 
