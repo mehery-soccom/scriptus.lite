@@ -54,8 +54,9 @@ async function initJobs({ name, path }) {
     const aggrQueue = new Queue(aggrQueueName, { connection: client, limiter: job.meta.limiter });
 
     const executionStrategy = job.meta.executionStrategy || job.meta.execution_strategy || "concurrent";
-    const aggregationStrategy = job.meta.aggregationStrategy || job.meta.aggregation_strategy || "sequential"; // POSSIBLE VALUE : concurrent, sequential, mutex;
+    // POSSIBLE VALUE : concurrent, sequential, mutex;
 
+    const aggregationStrategy = job.meta.aggregationStrategy || job.meta.aggregation_strategy || "sequential";
     // POSSIBLE VALUE : concurrent, sequential, mutex;
 
     coreutils.log("@Job", jobsPathRel, file);

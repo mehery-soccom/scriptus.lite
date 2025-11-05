@@ -2,6 +2,7 @@
 
 This framework allows developers to define distributed, scalable background jobs using decorators and smart execution strategies. It supports tasks that can be executed concurrently, sequentially, or using mutex locks, and offers aggregation and deduplication features to efficiently process large-scale or task-based workloads.
 
+
 ---
 
 ## 🚀 Example: Campaign Job with Task Fan-Out
